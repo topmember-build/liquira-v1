@@ -194,3 +194,46 @@
   50% { opacity: 0.55; }
 }
 .animate-pulse-soft { animation: pulse-soft 1.6s ease-in-out infinite; }
+
+@keyframes ticker-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-ticker { animation: ticker-scroll 50s linear infinite; }
+
+.font-serif-italic {
+  font-family: "Instrument Serif", "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.corner-frame {
+  position: relative;
+}
+.corner-frame::before,
+.corner-frame::after {
+  content: "+";
+  position: absolute;
+  font-family: var(--font-mono);
+  color: color-mix(in oklab, var(--primary) 70%, transparent);
+  font-size: 12px;
+  line-height: 1;
+}
+.corner-frame::before { top: -6px; left: -6px; }
+.corner-frame::after { top: -6px; right: -6px; }
+.corner-frame > .corner-bl,
+.corner-frame > .corner-br {
+  position: absolute;
+  font-family: var(--font-mono);
+  color: color-mix(in oklab, var(--primary) 70%, transparent);
+  font-size: 12px;
+  line-height: 1;
+}
+.corner-frame > .corner-bl { bottom: -6px; left: -6px; }
+.corner-frame > .corner-br { bottom: -6px; right: -6px; }
+
+.bg-radial-mint {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 70%),
+    var(--background);
+}
