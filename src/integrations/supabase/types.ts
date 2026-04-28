@@ -98,6 +98,8 @@ export type Database = {
           default_slippage_bps: number
           display_name: string | null
           id: string
+          preferred_chain: string
+          theme: string
           updated_at: string
         }
         Insert: {
@@ -106,6 +108,8 @@ export type Database = {
           default_slippage_bps?: number
           display_name?: string | null
           id: string
+          preferred_chain?: string
+          theme?: string
           updated_at?: string
         }
         Update: {
@@ -114,6 +118,8 @@ export type Database = {
           default_slippage_bps?: number
           display_name?: string | null
           id?: string
+          preferred_chain?: string
+          theme?: string
           updated_at?: string
         }
         Relationships: []
@@ -377,6 +383,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_wallets: {
+        Row: {
+          address: string
+          chain: string
+          created_at: string
+          id: string
+          label: string | null
+          user_id: string
+        }
+        Insert: {
+          address: string
+          chain?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string
+          chain?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       webhook_deliveries: {
         Row: {
