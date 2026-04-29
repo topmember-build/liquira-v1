@@ -4,6 +4,7 @@ import { LogOut, User as UserIcon, Wallet as WalletIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { CHAINS } from "@/lib/stables";
+import { NotificationBell } from "./NotificationBell";
 
 export function Header() {
   return (
@@ -41,7 +42,8 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <NotificationBell />
           <AuthButton />
           <WalletButton />
         </div>
