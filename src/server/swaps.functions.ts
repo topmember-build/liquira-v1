@@ -101,7 +101,7 @@ export const executeSwap = createServerFn({ method: "POST" })
 
     const { data: inserted, error } = await supabaseAdmin
       .from("swaps")
-      .insert(insertPayload)
+      .insert([insertPayload])
       .select("id")
       .single();
 
