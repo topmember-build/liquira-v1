@@ -78,28 +78,30 @@ export const executeSwap = createServerFn({ method: "POST" })
       slippageBps: data.slippageBps,
     });
 
+    const insertPayload = {
+      user_id: userId,
+      route_id: data.routeId ?? null,
+      from_token: quote.fromToken,
+      to_token: quote.toToken,
+      from_chain: quote.fromChain,
+      to_chain: quote.toChain,
+      amount_in: quote.amountIn,
+      amount_out: quote.amountOut,
+      rate: quote.rate,
+      min_received: quote.minReceived,
+      price_impact_bps: quote.priceImpactBps,
+      slippage_bps: quote.slippageBps,
+      gas_estimate_usd: quote.gasEstimateUsd,
+      route_legs: quote.route as unknown as object,
+      quote_id: quote.quoteId,
+      status: "queued",
+      wallet_address: data.walletAddress ?? null,
+      source: data.source,
+    };
+
     const { data: inserted, error } = await supabaseAdmin
       .from("swaps")
-      .insert({
-        user_id: userId,
-        route_id: data.routeId ?? null,
-        from_token: quote.fromToken,
-        to_token: quote.toToken,
-        from_chain: quote.fromChain,
-        to_chain: quote.toChain,
-        amount_in: quote.amountIn,
-        amount_out: quote.amountOut,
-        rate: quote.rate,
-        min_received: quote.minReceived,
-        price_impact_bps: quote.priceImpactBps,
-        slippage_bps: quote.slippageBps,
-        gas_estimate_usd: quote.gasEstimateUsd,
-        route_legs: quote.route as unknown as object,
-        quote_id: quote.quoteId,
-        status: "queued",
-        wallet_address: data.walletAddress ?? null,
-        source: data.source,
-      })
+      .insert(insertPayload)
       .select("id")
       .single();
 
