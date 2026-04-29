@@ -91,13 +91,54 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          link: string | null
+          metadata: Json | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          metadata?: Json | null
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          metadata?: Json | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
           default_slippage_bps: number
           display_name: string | null
+          email_notifications: boolean
           id: string
+          notify_prefs_changed: boolean
+          notify_schedule_run: boolean
+          notify_swap_confirmed: boolean
+          notify_swap_failed: boolean
           preferred_chain: string
           theme: string
           updated_at: string
@@ -107,7 +148,12 @@ export type Database = {
           created_at?: string
           default_slippage_bps?: number
           display_name?: string | null
+          email_notifications?: boolean
           id: string
+          notify_prefs_changed?: boolean
+          notify_schedule_run?: boolean
+          notify_swap_confirmed?: boolean
+          notify_swap_failed?: boolean
           preferred_chain?: string
           theme?: string
           updated_at?: string
@@ -117,7 +163,12 @@ export type Database = {
           created_at?: string
           default_slippage_bps?: number
           display_name?: string | null
+          email_notifications?: boolean
           id?: string
+          notify_prefs_changed?: boolean
+          notify_schedule_run?: boolean
+          notify_swap_confirmed?: boolean
+          notify_swap_failed?: boolean
           preferred_chain?: string
           theme?: string
           updated_at?: string
@@ -390,23 +441,62 @@ export type Database = {
           chain: string
           created_at: string
           id: string
+          is_default: boolean
           label: string | null
           user_id: string
+          verified_at: string | null
         }
         Insert: {
           address: string
           chain?: string
           created_at?: string
           id?: string
+          is_default?: boolean
           label?: string | null
           user_id: string
+          verified_at?: string | null
         }
         Update: {
           address?: string
           chain?: string
           created_at?: string
           id?: string
+          is_default?: boolean
           label?: string | null
+          user_id?: string
+          verified_at?: string | null
+        }
+        Relationships: []
+      }
+      wallet_link_nonces: {
+        Row: {
+          address: string
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          message: string
+          nonce: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          message: string
+          nonce: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          message?: string
+          nonce?: string
           user_id?: string
         }
         Relationships: []
@@ -499,7 +589,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      notify_user: {
+        Args: {
+          _body?: string
+          _link?: string
+          _metadata?: Json
+          _title: string
+          _type: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

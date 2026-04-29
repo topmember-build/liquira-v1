@@ -4,6 +4,7 @@ import { LogOut, User as UserIcon, Wallet as WalletIcon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { CHAINS } from "@/lib/stables";
+import { NotificationBell } from "./NotificationBell";
 
 export function Header() {
   return (
@@ -41,7 +42,8 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <NotificationBell />
           <AuthButton />
           <WalletButton />
         </div>
@@ -74,6 +76,7 @@ function AuthButton() {
     return (
       <Link
         to="/login"
+        search={{ redirect: "/account" }}
         className="hidden border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-foreground hover:bg-surface-1 sm:block"
       >
         Sign in

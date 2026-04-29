@@ -2,6 +2,7 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WalletProvider } from "@/contexts/WalletContext";
+import { NotificationsProvider } from "@/contexts/NotificationsContext";
 
 import appCss from "../styles.css?url";
 
@@ -80,9 +81,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   return (
     <AuthProvider>
-      <WalletProvider>
-        <Outlet />
-      </WalletProvider>
+      <NotificationsProvider>
+        <WalletProvider>
+          <Outlet />
+        </WalletProvider>
+      </NotificationsProvider>
     </AuthProvider>
   );
 }
