@@ -92,7 +92,7 @@ export const executeSwap = createServerFn({ method: "POST" })
       price_impact_bps: quote.priceImpactBps,
       slippage_bps: quote.slippageBps,
       gas_estimate_usd: quote.gasEstimateUsd,
-      route_legs: quote.route as unknown as object,
+      route_legs: JSON.parse(JSON.stringify(quote.route)),
       quote_id: quote.quoteId,
       status: "queued",
       wallet_address: data.walletAddress ?? null,
