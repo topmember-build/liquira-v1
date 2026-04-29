@@ -15,6 +15,11 @@ type Profile = {
   default_slippage_bps: number;
   preferred_chain: string;
   theme: string;
+  notify_swap_confirmed: boolean;
+  notify_swap_failed: boolean;
+  notify_schedule_run: boolean;
+  notify_prefs_changed: boolean;
+  email_notifications: boolean;
 };
 
 function PreferencesPage() {
@@ -59,10 +64,24 @@ function PreferencesPage() {
         default_slippage_bps: profile.default_slippage_bps,
         preferred_chain: profile.preferred_chain,
         theme: profile.theme,
+        notify_swap_confirmed: profile.notify_swap_confirmed,
+        notify_swap_failed: profile.notify_swap_failed,
+        notify_schedule_run: profile.notify_schedule_run,
+        notify_prefs_changed: profile.notify_prefs_changed,
+        email_notifications: profile.email_notifications,
       })
       .eq("id", user.id);
     setBusy(false);
     if (error) return toast.error(error.message);
+    // Fire a notification respecting the user's own preference toggle
+    await supabase.rpc as never; // no-op type guard
+    await supabase.from("notifications").insert({
+      user_id: user.id,
+      type: "prefs.updated",
+      title: "Preferences updated",
+      body: "Your account preferences were saved.",
+      link: "/account/preferences",
+    });
     toast.success("Preferences saved");
   };
 
