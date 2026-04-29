@@ -74,6 +74,7 @@ function AuthButton() {
     return (
       <Link
         to="/login"
+        search={{ redirect: "/account" }}
         className="hidden border border-border px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-foreground hover:bg-surface-1 sm:block"
       >
         Sign in
