@@ -15,6 +15,7 @@ type Profile = {
   default_slippage_bps: number;
   preferred_chain: string;
   theme: string;
+  display_currency: string;
   notify_swap_confirmed: boolean;
   notify_swap_failed: boolean;
   notify_schedule_run: boolean;
@@ -64,6 +65,7 @@ function PreferencesPage() {
         default_slippage_bps: profile.default_slippage_bps,
         preferred_chain: profile.preferred_chain,
         theme: profile.theme,
+        display_currency: profile.display_currency,
         notify_swap_confirmed: profile.notify_swap_confirmed,
         notify_swap_failed: profile.notify_swap_failed,
         notify_schedule_run: profile.notify_schedule_run,
@@ -150,6 +152,27 @@ function PreferencesPage() {
             </select>
           </Field>
         </div>
+
+        <div className="text-mono-label mb-4 mt-8" style={{ fontSize: 10 }}>
+          DISPLAY CURRENCY
+        </div>
+        <Field label="SHOW PRICES, KPIs, AND NOTIONALS IN">
+          <div className="flex gap-2">
+            {(["USD", "NGN", "EUR", "GBP"] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => setProfile({ ...profile, display_currency: c })}
+                className={`flex-1 border px-3 py-2 font-mono text-[11px] uppercase tracking-widest ${
+                  profile.display_currency === c
+                    ? "border-primary text-primary"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {c === "NGN" ? "₦ Naira" : c}
+              </button>
+            ))}
+          </div>
+        </Field>
 
         <div className="text-mono-label mb-4 mt-8" style={{ fontSize: 10 }}>
           APPEARANCE
