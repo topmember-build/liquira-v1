@@ -42,7 +42,7 @@ export function Hero() {
           <p className="mt-8 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
             Liquira settles cross-currency payments on Arc through depth-aware,
             multi-stablecoin liquidity. Eleven native stables — USDC, EURC, KRW1,
-            JPYC and more — routed at sub-basis-point slippage in{" "}
+            JPYC, NGNX and more — routed at sub-basis-point slippage in{" "}
             <span className="text-foreground">under 400 ms</span>.
           </p>
 
