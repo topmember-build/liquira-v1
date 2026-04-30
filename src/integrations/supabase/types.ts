@@ -132,6 +132,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           default_slippage_bps: number
+          display_currency: string
           display_name: string | null
           email_notifications: boolean
           id: string
@@ -147,6 +148,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           default_slippage_bps?: number
+          display_currency?: string
           display_name?: string | null
           email_notifications?: boolean
           id: string
@@ -162,6 +164,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           default_slippage_bps?: number
+          display_currency?: string
           display_name?: string | null
           email_notifications?: boolean
           id?: string
