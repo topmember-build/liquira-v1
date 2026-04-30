@@ -27,7 +27,7 @@ export function Hero() {
             <span className="text-border-strong">·</span>
             <span>SOLVER V0.3</span>
             <span className="text-border-strong">·</span>
-            <span>11 STABLES</span>
+            <span>11 STABLES · ₦ NGNX</span>
           </div>
 
           <h1 className="text-[clamp(2.75rem,7vw,5.5rem)] leading-[1.02] font-medium tracking-[-0.02em]">
