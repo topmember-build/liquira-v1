@@ -71,7 +71,7 @@ export function Hero() {
           {/* KPI strip — live testnet stats */}
           <LiveKpis />
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px] tracking-widest text-muted-foreground/70">
-            {["Circle", "BDACS", "JPYC", "STRAITSX", "Bitso", "Transfero", "POUNDTOKEN"].map((i) => (
+            {["Circle", "BDACS", "JPYC", "STRAITSX", "Bitso", "Transfero", "POUNDTOKEN", "Onyx Naira"].map((i) => (
               <span key={i}>{i.toUpperCase()}</span>
             ))}
           </div>
