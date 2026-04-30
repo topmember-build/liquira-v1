@@ -78,6 +78,11 @@ export function priceImpactBps(amountIn: number, fromSymbol: string): number {
     XSGD: 2_500_000,
     GYEN: 2_000_000,
     BRZ: 1_500_000,
+    KRW1: 2_500_000,
+    JPYC: 3_000_000,
+    MXNB: 1_800_000,
+    SGDX: 2_200_000,
+    NGNX: 1_200_000,
   };
   const depth = depthMap[fromSymbol.toUpperCase()] ?? 1_000_000;
   // simple x/(x+depth) curve, scaled to bps

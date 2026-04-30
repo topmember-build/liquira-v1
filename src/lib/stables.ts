@@ -34,6 +34,11 @@ export const STABLES: Stable[] = [
   { symbol: "XSGD", name: "StraitsX SGD", pegCurrency: "SGD", pegValueUsd: 0.74, decimals: 6, color: "#EF3340" },
   { symbol: "GBPT", name: "Poundtoken", pegCurrency: "GBP", pegValueUsd: 1.27, decimals: 6, color: "#012169" },
   { symbol: "BRZ", name: "Brazilian Digital Token", pegCurrency: "BRL", pegValueUsd: 0.2, decimals: 4, color: "#009C3B" },
+  { symbol: "KRW1", name: "Korean Won Stable", pegCurrency: "KRW", pegValueUsd: 0.000726, decimals: 6, color: "#003478" },
+  { symbol: "JPYC", name: "JPY Coin", pegCurrency: "JPY", pegValueUsd: 0.0064, decimals: 6, color: "#BC002D" },
+  { symbol: "MXNB", name: "Mexican Peso Stable", pegCurrency: "MXN", pegValueUsd: 0.0512, decimals: 6, color: "#006847" },
+  { symbol: "SGDX", name: "Singapore Dollar Stable", pegCurrency: "SGD", pegValueUsd: 0.7421, decimals: 6, color: "#EF3340" },
+  { symbol: "NGNX", name: "Naira Stable", pegCurrency: "NGN", pegValueUsd: 0.00062, decimals: 6, color: "#008751" },
 ];
 
 export function getStable(symbol: string): Stable | undefined {
