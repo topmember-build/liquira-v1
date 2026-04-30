@@ -68,20 +68,8 @@ export function Hero() {
             </div>
           </div>
 
-          {/* KPI strip */}
-          <div className="mt-12 grid max-w-2xl grid-cols-2 gap-y-6 sm:grid-cols-4">
-            {[
-              ["TVL", "$189.96M"],
-              ["24H VOLUME", "$30.05M"],
-              ["AVG SLIPPAGE", "0.71 bps"],
-              ["ISSUERS ROUTED", "8"],
-            ].map(([l, v]) => (
-              <div key={l}>
-                <div className="text-mono-label">{l}</div>
-                <div className="mt-1 font-mono text-lg text-foreground">{v}</div>
-              </div>
-            ))}
-          </div>
+          {/* KPI strip — live testnet stats */}
+          <LiveKpis />
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px] tracking-widest text-muted-foreground/70">
             {["Circle", "BDACS", "JPYC", "STRAITSX", "Bitso", "Transfero", "POUNDTOKEN"].map((i) => (
               <span key={i}>{i.toUpperCase()}</span>
