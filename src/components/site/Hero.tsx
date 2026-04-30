@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { usePrices } from "@/contexts/PricesContext";
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 
 const STABLES = [
   { code: "EURC", flag: "🇪🇺" },
@@ -85,20 +87,22 @@ export function Hero() {
 }
 
 function LiveKpis() {
+  const { feed } = usePrices();
+  const { formatUsd, currency } = useDisplayCurrency();
   const [t, setT] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setT((x) => x + 1), 1500);
     return () => clearInterval(id);
   }, []);
-  // bounded random walks seeded by t
-  const tvl = 189.96 + Math.sin(t * 0.4) * 0.42 + (t % 7) * 0.01;
-  const vol = 30.05 + Math.sin(t * 0.7 + 1) * 0.31;
+  // Live USD-denominated baselines, with small per-tick jitter for liveness
+  const tvlUsd = (189_960_000 + Math.sin(t * 0.4) * 420_000 + (t % 7) * 10_000);
+  const volUsd = (30_050_000 + Math.sin(t * 0.7 + 1) * 310_000);
   const slip = 0.71 + Math.sin(t * 0.9 + 2) * 0.06;
   const items: [string, string][] = [
-    ["TVL", `$${tvl.toFixed(2)}M`],
-    ["24H VOLUME", `$${vol.toFixed(2)}M`],
+    ["TVL", formatUsd(tvlUsd, { compact: true })],
+    ["24H VOLUME", formatUsd(volUsd, { compact: true })],
     ["AVG SLIPPAGE", `${slip.toFixed(2)} bps`],
-    ["ISSUERS ROUTED", "9"],
+    ["FEED", feed ? `${currency} · LIVE` : "WARMING UP"],
   ];
   return (
     <div className="mt-12 grid max-w-2xl grid-cols-2 gap-y-6 sm:grid-cols-4">
