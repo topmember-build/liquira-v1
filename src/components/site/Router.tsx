@@ -178,45 +178,165 @@ function DepthChart() {
   );
 }
 
+type Hop = { token: string; flag: string };
+
+const ROUTES: { hops: Hop[]; notional: string; settle: string; saved: string }[] = [
+  {
+    hops: [
+      { token: "USDC", flag: "🇺🇸" },
+      { token: "EURC", flag: "🇪🇺" },
+    ],
+    notional: "$10,000",
+    settle: "~ 0.4s",
+    saved: "1.42",
+  },
+  {
+    hops: [
+      { token: "EURC", flag: "🇪🇺" },
+      { token: "USDC", flag: "🇺🇸" },
+      { token: "JPYC", flag: "🇯🇵" },
+    ],
+    notional: "$25,000",
+    settle: "~ 0.6s",
+    saved: "2.81",
+  },
+  {
+    hops: [
+      { token: "GBPT", flag: "🇬🇧" },
+      { token: "USDC", flag: "🇺🇸" },
+      { token: "NGNX", flag: "🇳🇬" },
+    ],
+    notional: "$50,000",
+    settle: "~ 0.7s",
+    saved: "3.96",
+  },
+  {
+    hops: [
+      { token: "MXNB", flag: "🇲🇽" },
+      { token: "USDC", flag: "🇺🇸" },
+      { token: "EURC", flag: "🇪🇺" },
+      { token: "KRW1", flag: "🇰🇷" },
+    ],
+    notional: "$100,000",
+    settle: "~ 0.9s",
+    saved: "5.21",
+  },
+  {
+    hops: [
+      { token: "NGNX", flag: "🇳🇬" },
+      { token: "USDC", flag: "🇺🇸" },
+      { token: "BRZ", flag: "🇧🇷" },
+    ],
+    notional: "$8,500",
+    settle: "~ 0.6s",
+    saved: "2.04",
+  },
+];
+
+function shortHash(seed: number): string {
+  const a = ((seed * 9301 + 49297) % 233280).toString(16).padStart(3, "0");
+  const b = (((seed + 1) * 1664525 + 1013904223) % 0xffff).toString(16).padStart(4, "0");
+  return `0x${a}…${b}`;
+}
+
 function RouteTrace() {
+  const [routeIdx, setRouteIdx] = useState(0);
+  const [phase, setPhase] = useState(0); // 0..hops-1, animates the active hop highlight
+  const [candidates, setCandidates] = useState(8);
+
+  const route = ROUTES[routeIdx];
+  const hops = route.hops;
+
+  // Cycle through routes every ~6s
+  useEffect(() => {
+    const id = setInterval(() => {
+      setRouteIdx((i) => (i + 1) % ROUTES.length);
+      setPhase(0);
+      setCandidates(6 + Math.floor(Math.random() * 7));
+    }, 6000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Step the active hop every 700ms
+  useEffect(() => {
+    const id = setInterval(() => {
+      setPhase((p) => (p + 1) % hops.length);
+    }, 700);
+    return () => clearInterval(id);
+  }, [hops.length]);
+
+  const numHops = hops.length - 1;
+  const txHash = shortHash(routeIdx + 17);
+
   return (
     <div className="border border-border bg-background p-5">
       <div className="flex items-center justify-between font-mono text-[11px]">
         <div className="flex items-center gap-2 tracking-widest text-muted-foreground">
-          <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-primary" />
           <span>ROUTE TRACE</span>
         </div>
-        <span className="text-primary">solving · 8 candidates</span>
+        <span className="text-primary tabular-nums">solving · {candidates} candidates</span>
       </div>
 
-      <div className="mt-5 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div className="grid h-9 w-9 place-items-center rounded-full border border-border bg-surface-1">🇺🇸</div>
-          <div className="font-mono text-xs">
-            <div>USDC</div>
-            <div className="text-mono-label" style={{ fontSize: 9 }}>SOURCE</div>
-          </div>
-        </div>
-        <div className="relative h-px flex-1 bg-border">
-          <div className="absolute inset-y-0 left-0 w-2/3 bg-primary/60" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background px-2 font-mono text-[10px] text-primary">
-            1 hop · 0.4s
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="font-mono text-xs text-right">
-            <div>EURC</div>
-            <div className="text-mono-label" style={{ fontSize: 9 }}>DEST</div>
-          </div>
-          <div className="grid h-9 w-9 place-items-center rounded-full border border-border bg-surface-1">🇪🇺</div>
-        </div>
+      {/* Multi-hop visualization */}
+      <div className="mt-6 flex items-center justify-between gap-2">
+        {hops.map((h, i) => {
+          const isActive = i === phase;
+          const isVisited = i <= phase;
+          return (
+            <div key={`${h.token}-${i}`} className="flex flex-1 items-center gap-2 last:flex-none">
+              <div className="flex flex-col items-center">
+                <div
+                  className={`grid h-9 w-9 place-items-center rounded-full border text-base transition-all duration-300 ${
+                    isActive
+                      ? "border-primary bg-primary/15 scale-110 shadow-[0_0_16px_-2px_oklch(0.78_0.18_145/0.6)]"
+                      : isVisited
+                        ? "border-primary/50 bg-surface-1"
+                        : "border-border bg-surface-1 opacity-60"
+                  }`}
+                >
+                  {h.flag}
+                </div>
+                <div className={`mt-1 font-mono text-[10px] ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                  {h.token}
+                </div>
+              </div>
+
+              {i < hops.length - 1 && (
+                <div className="relative h-px flex-1 bg-border">
+                  {/* Travelling pulse along the wire */}
+                  <div
+                    className={`absolute top-1/2 -translate-y-1/2 h-1.5 w-1.5 rounded-full bg-primary transition-all duration-500 ${
+                      i === phase ? "left-[85%] opacity-100" : i < phase ? "left-full opacity-0" : "left-0 opacity-40"
+                    }`}
+                    style={{ boxShadow: "0 0 8px oklch(0.78 0.18 145)" }}
+                  />
+                  <div
+                    className={`absolute inset-y-0 left-0 bg-primary/60 transition-all duration-700 ease-out ${
+                      i < phase ? "w-full" : i === phase ? "w-3/4" : "w-0"
+                    }`}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 text-center font-mono text-[10px] text-primary tabular-nums">
+        {numHops} {numHops === 1 ? "hop" : "hops"} · {route.settle}
       </div>
 
       <div className="mt-5 grid grid-cols-4 border-t border-border pt-3 font-mono text-[12px]">
-        {[["HOPS", "1"], ["NOTIONAL", "$10,000"], ["POOLS", "1"], ["SETTLEMENT", "~ 0.4s"]].map(([l, v]) => (
+        {[
+          ["HOPS", String(numHops)],
+          ["NOTIONAL", route.notional],
+          ["POOLS", String(numHops)],
+          ["SETTLEMENT", route.settle],
+        ].map(([l, v]) => (
           <div key={l}>
             <div className="text-mono-label" style={{ fontSize: 10 }}>{l}</div>
-            <div className="mt-1">{v}</div>
+            <div className="mt-1 tabular-nums">{v}</div>
           </div>
         ))}
       </div>
@@ -224,11 +344,12 @@ function RouteTrace() {
       <div className="mt-5 border-t border-border pt-3 font-mono text-[11px] leading-relaxed">
         <div className="text-muted-foreground">// solver_log</div>
         <div className="mt-1 text-foreground/80">
-          fetched 8 pools · sized 1 candidate path · saved{" "}
-          <span className="text-primary">1.42 bps</span> vs naive quote
+          fetched <span className="tabular-nums">{candidates}</span> pools · sized {numHops} candidate{" "}
+          {numHops === 1 ? "path" : "paths"} · saved{" "}
+          <span className="text-primary tabular-nums">{route.saved} bps</span> vs naive quote
         </div>
         <div className="mt-1 text-muted-foreground">
-          tx_hash <span className="text-foreground/80">0x71e…a3f9</span> · arc-testnet ·{" "}
+          tx_hash <span className="text-foreground/80">{txHash}</span> · arc-testnet ·{" "}
           <span className="text-primary">ready to broadcast ▌</span>
         </div>
       </div>
