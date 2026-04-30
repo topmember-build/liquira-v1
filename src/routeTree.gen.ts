@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StatsRouteImport } from './routes/stats'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
@@ -18,6 +19,11 @@ import { Route as AccountWalletsRouteImport } from './routes/account.wallets'
 import { Route as AccountPreferencesRouteImport } from './routes/account.preferences'
 import { Route as AccountHistoryRouteImport } from './routes/account.history'
 
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRouteWithChildren
   '/login': typeof LoginRoute
+  '/stats': typeof StatsRoute
   '/account/history': typeof AccountHistoryRoute
   '/account/preferences': typeof AccountPreferencesRoute
   '/account/wallets': typeof AccountWalletsRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/stats': typeof StatsRoute
   '/account/history': typeof AccountHistoryRoute
   '/account/preferences': typeof AccountPreferencesRoute
   '/account/wallets': typeof AccountWalletsRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/account': typeof AccountRouteWithChildren
   '/login': typeof LoginRoute
+  '/stats': typeof StatsRoute
   '/account/history': typeof AccountHistoryRoute
   '/account/preferences': typeof AccountPreferencesRoute
   '/account/wallets': typeof AccountWalletsRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/login'
+    | '/stats'
     | '/account/history'
     | '/account/preferences'
     | '/account/wallets'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/stats'
     | '/account/history'
     | '/account/preferences'
     | '/account/wallets'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/login'
+    | '/stats'
     | '/account/history'
     | '/account/preferences'
     | '/account/wallets'
@@ -125,11 +137,19 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRouteWithChildren
   LoginRoute: typeof LoginRoute
+  StatsRoute: typeof StatsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -210,6 +230,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRouteWithChildren,
   LoginRoute: LoginRoute,
+  StatsRoute: StatsRoute,
   AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
