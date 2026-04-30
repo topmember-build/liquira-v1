@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { CHAINS } from "@/lib/stables";
 import { NotificationBell } from "./NotificationBell";
+import { useDisplayCurrency, type DisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 
 export function Header() {
   return (
