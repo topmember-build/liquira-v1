@@ -1,11 +1,14 @@
+import { useEffect, useState } from "react";
+
 const STABLES = [
-  { code: "EURC", flag: "🇪🇺", x: 78, y: 18 },
-  { code: "KRW1", flag: "🇰🇷", x: 92, y: 42 },
-  { code: "JPYC", flag: "🇯🇵", x: 92, y: 70 },
-  { code: "GBPT", flag: "🇬🇧", x: 78, y: 88 },
-  { code: "BRZ", flag: "🇧🇷", x: 50, y: 96 },
-  { code: "MXNB", flag: "🇲🇽", x: 14, y: 70 },
-  { code: "SGDX", flag: "🇸🇬", x: 14, y: 30 },
+  { code: "EURC", flag: "🇪🇺" },
+  { code: "KRW1", flag: "🇰🇷" },
+  { code: "JPYC", flag: "🇯🇵" },
+  { code: "GBPT", flag: "🇬🇧" },
+  { code: "BRZ", flag: "🇧🇷" },
+  { code: "MXNB", flag: "🇲🇽" },
+  { code: "SGDX", flag: "🇸🇬" },
+  { code: "NGNX", flag: "🇳🇬" },
 ];
 
 export function Hero() {
