@@ -8,6 +8,7 @@ import { Pools } from "@/components/site/Pools";
 import { Analytics } from "@/components/site/Analytics";
 import { Developers } from "@/components/site/Developers";
 import { Footer } from "@/components/site/Footer";
+import { StatsPanel } from "@/components/site/StatsPanel";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -34,6 +35,11 @@ function LandingPage() {
         <Capabilities />
         <RouterSection />
         <Pools />
+        <section className="border-t border-border">
+          <div className="mx-auto max-w-[1400px] px-6 py-16">
+            <StatsPanel compact />
+          </div>
+        </section>
         <Analytics />
         <Developers />
       </main>
