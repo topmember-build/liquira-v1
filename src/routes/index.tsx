@@ -8,6 +8,7 @@ import { Pools } from "@/components/site/Pools";
 import { Analytics } from "@/components/site/Analytics";
 import { Developers } from "@/components/site/Developers";
 import { Footer } from "@/components/site/Footer";
+import { StatsPanel } from "@/components/site/StatsPanel";
 
 export const Route = createFileRoute("/")({
   head: () => ({

@@ -26,30 +26,48 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-7 md:flex">
-          {[
-            ["01", "Router"],
-            ["02", "Pools"],
-            ["03", "Analytics"],
-            ["04", "Developers"],
-          ].map(([n, label]) => (
-            <a
-              key={label}
-              href={`#${label.toLowerCase()}`}
-              className="font-mono text-[13px] text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <span className="mr-1.5 text-primary/70">{n}</span>
-              {label}
-            </a>
-          ))}
+          <a href="#router" className="font-mono text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            <span className="mr-1.5 text-primary/70">01</span>Router
+          </a>
+          <a href="#pools" className="font-mono text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            <span className="mr-1.5 text-primary/70">02</span>Pools
+          </a>
+          <Link to="/stats" className="font-mono text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            <span className="mr-1.5 text-primary/70">03</span>Stats
+          </Link>
+          <a href="#developers" className="font-mono text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            <span className="mr-1.5 text-primary/70">04</span>Developers
+          </a>
         </nav>
 
         <div className="flex items-center gap-2">
+          <CurrencySwitcher />
           <NotificationBell />
           <AuthButton />
           <WalletButton />
         </div>
       </div>
     </header>
+  );
+}
+
+function CurrencySwitcher() {
+  const { currency, setCurrency } = useDisplayCurrency();
+  const options: DisplayCurrency[] = ["USD", "NGN", "EUR", "GBP"];
+  return (
+    <div className="hidden items-center border border-border md:flex" title="Display currency">
+      {options.map((c) => (
+        <button
+          key={c}
+          onClick={() => setCurrency(c)}
+          className={`px-2 py-1 font-mono text-[10px] uppercase tracking-widest transition-colors ${
+            currency === c ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {c === "NGN" ? "₦ NGN" : c}
+        </button>
+      ))}
+    </div>
   );
 }
 
