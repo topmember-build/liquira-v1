@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Send, ArrowDownUp, Settings } from "lucide-react";
+import { Loader2, Send, ArrowDownUp, Settings, ExternalLink, Droplets } from "lucide-react";
 import { SectionHeader } from "./Capabilities";
 import { STABLES } from "@/lib/stables";
 import { usePrices } from "@/contexts/PricesContext";
@@ -8,8 +8,12 @@ import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { simulateSwap, executeSwap } from "@/server/swaps.functions";
+import { useOnchainSwap, type SwapPhase } from "@/hooks/use-onchain-swap";
+import { FAUCETS, SMOKE_TEST_ONLY } from "@/lib/arc-testnet";
+import { CHAIN_ID_REVERSE } from "@/lib/wagmi";
 import type { Quote } from "@/lib/quote-engine";
 import { useNavigate } from "@tanstack/react-router";
+import { useChainId } from "wagmi";
 
 export function RouterSection() {
   return (
