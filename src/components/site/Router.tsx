@@ -365,6 +365,24 @@ function SwapPanel() {
         </div>
       </div>
 
+      {/* On-chain phase indicator (Arc Testnet) */}
+      {isArcTestnet && onchain.phase !== "idle" && (
+        <div className="mt-4 border border-border bg-surface-1 p-3 font-mono text-[11px]">
+          <div className="flex items-center gap-2">
+            <PhaseIndicator phase={onchain.phase} />
+            <span className="uppercase tracking-widest text-foreground">{phaseLabel(onchain.phase)}</span>
+          </div>
+          {onchain.result && (
+            <div className="mt-2 space-y-1 text-muted-foreground">
+              <div>TX: <a href={onchain.result.explorerUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">{onchain.result.txHash.slice(0, 14)}…<ExternalLink size={10} className="ml-1 inline" /></a></div>
+              <div>Gas used: {onchain.result.gasUsed.toString()}</div>
+              <div>Transfer event: {onchain.result.transferVerified ? "✓ verified" : "✗ not found"}</div>
+            </div>
+          )}
+          {onchain.error && <div className="mt-1 text-destructive">{onchain.error}</div>}
+        </div>
+      )}
+
       <button
         onClick={handleExecute}
         disabled={executing || !amount}
@@ -372,24 +390,76 @@ function SwapPanel() {
       >
         {executing ? (
           <>
-            <Loader2 size={14} className="animate-spin" /> EXECUTING…
+            <Loader2 size={14} className="animate-spin" /> {isArcTestnet ? "SENDING ON-CHAIN…" : "EXECUTING…"}
           </>
         ) : user ? (
           <>
-            <Send size={14} /> EXECUTE SWAP →
+            <Send size={14} /> {isArcTestnet ? "SEND ON ARC TESTNET →" : "EXECUTE SWAP →"}
           </>
         ) : (
           <>SIGN IN TO SWAP →</>
         )}
       </button>
+
       <div className="mt-3 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
-        <span>{wallet.connected ? `wallet · ${wallet.address!.slice(0, 6)}…${wallet.address!.slice(-4)}` : "Permit2 enabled · 0 approvals"}</span>
-        <span className="text-primary">▌ready</span>
+        <span>
+          {isArcTestnet && wallet.connected
+            ? `arc-testnet · bal ${onchainBal !== null ? onchainBal.toLocaleString() : "—"} USDC`
+            : wallet.connected
+              ? `wallet · ${wallet.address!.slice(0, 6)}…${wallet.address!.slice(-4)}`
+              : "Permit2 enabled · 0 approvals"}
+        </span>
+        <span className="text-primary">
+          {isArcTestnet ? "▌smoke test" : "▌ready"}
+        </span>
       </div>
+
+      {/* Faucet links (Arc Testnet) */}
+      {isArcTestnet && (
+        <div className="mt-3 border border-border bg-surface-1 p-3">
+          <div className="flex items-center gap-1 text-mono-label" style={{ fontSize: 9 }}>
+            <Droplets size={10} /> TESTNET FAUCETS
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {FAUCETS.map((f) => (
+              <a
+                key={f.url}
+                href={f.url}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-1 border border-border px-2 py-1 font-mono text-[10px] text-primary hover:bg-surface-2"
+              >
+                {f.label} <ExternalLink size={8} />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {quote?.warnings.length ? (
         <div className="mt-2 font-mono text-[10px] text-yellow-400">⚠ {quote.warnings.join(" · ")}</div>
       ) : null}
     </div>
+  );
+}
+
+const PHASE_LABELS: Record<SwapPhase, string> = {
+  idle: "Ready",
+  "switching-chain": "Switching to Arc Testnet…",
+  simulating: "Simulating contract call…",
+  "awaiting-wallet": "Confirm in wallet…",
+  pending: "Waiting for receipt…",
+  confirming: "Verifying Transfer event…",
+  confirmed: "Confirmed ✓",
+  failed: "Failed",
+};
+function phaseLabel(p: SwapPhase) { return PHASE_LABELS[p]; }
+
+function PhaseIndicator({ phase }: { phase: SwapPhase }) {
+  const isActive = !["idle", "confirmed", "failed"].includes(phase);
+  const color = phase === "confirmed" ? "bg-primary" : phase === "failed" ? "bg-destructive" : "bg-primary";
+  return (
+    <span className={`inline-block h-2 w-2 rounded-full ${color} ${isActive ? "animate-pulse-soft" : ""}`} />
   );
 }
 
