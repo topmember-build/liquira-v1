@@ -51,22 +51,35 @@ function SwapPanel() {
   const { crossRate, feed } = usePrices();
   const { formatUsd } = useDisplayCurrency();
   const navigate = useNavigate();
+  const evmChainId = useChainId();
+  const onchain = useOnchainSwap();
 
   const [fromToken, setFromToken] = useState("USDC");
   const [toToken, setToToken] = useState("EURC");
   const [amountStr, setAmountStr] = useState("10000");
-  const [slippagePct, setSlippagePct] = useState(0.3); // 30 bps
+  const [slippagePct, setSlippagePct] = useState(0.3);
   const [routeMode, setRouteMode] = useState<RouteMode>("best");
   const [simulating, setSimulating] = useState(false);
   const [executing, setExecuting] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [pulseKey, setPulseKey] = useState(0);
+  const [onchainBal, setOnchainBal] = useState<number | null>(null);
 
   const amount = Number(amountStr) || 0;
   const liveRate = crossRate(fromToken, toToken) || 0;
   const estOut = amount * liveRate;
 
-  // Auto-simulate (debounced) when inputs change & feed is available
+  // Detect if wallet is on Arc Testnet
+  const isArcTestnet = CHAIN_ID_REVERSE[evmChainId] === "arc-testnet";
+
+  // Fetch on-chain USDC balance when on Arc
+  useEffect(() => {
+    if (isArcTestnet && wallet.connected) {
+      onchain.usdcBalance().then((b) => setOnchainBal(b));
+    }
+  }, [isArcTestnet, wallet.connected, wallet.address, onchain.usdcBalance]);
+
+  // Auto-simulate (debounced)
   useEffect(() => {
     if (!amount || amount <= 0 || !feed) {
       setQuote(null);
@@ -79,8 +92,8 @@ function SwapPanel() {
           data: {
             fromToken,
             toToken,
-            fromChain: "base",
-            toChain: routeMode === "multihop" ? "arbitrum" : "base",
+            fromChain: isArcTestnet ? "arc-testnet" : "base",
+            toChain: routeMode === "multihop" ? "arbitrum" : (isArcTestnet ? "arc-testnet" : "base"),
             amount,
             slippageBps: Math.round(slippagePct * 100),
           },
@@ -88,8 +101,6 @@ function SwapPanel() {
         setQuote(q);
         setPulseKey((k) => k + 1);
       } catch (e) {
-        // simulateSwap requires auth; for the public landing page we silently
-        // keep the live mid-rate display and skip the server simulation.
         const msg = e instanceof Error ? e.message : "";
         if (!msg.includes("Auth")) console.warn("simulate failed", e);
       } finally {
@@ -97,7 +108,7 @@ function SwapPanel() {
       }
     }, 400);
     return () => clearTimeout(id);
-  }, [fromToken, toToken, amount, slippagePct, routeMode, feed]);
+  }, [fromToken, toToken, amount, slippagePct, routeMode, feed, isArcTestnet]);
 
   const flip = () => {
     setFromToken(toToken);
@@ -116,6 +127,34 @@ function SwapPanel() {
       toast.error("Enter an amount");
       return;
     }
+
+    // On Arc Testnet with wallet connected → real on-chain ERC20 transfer
+    if (isArcTestnet && wallet.connected && SMOKE_TEST_ONLY) {
+      setExecuting(true);
+      onchain.reset();
+      const res = await onchain.execute(amount);
+      setExecuting(false);
+      if (res?.status === "success") {
+        toast.success("On-chain transfer confirmed!", {
+          description: `TX: ${res.txHash.slice(0, 10)}…`,
+          action: {
+            label: "View on ArcScan",
+            onClick: () => window.open(res.explorerUrl, "_blank"),
+          },
+        });
+        // Refresh balance
+        onchain.usdcBalance().then((b) => setOnchainBal(b));
+      } else if (res) {
+        toast.error("Transaction reverted on-chain");
+      }
+      // If null, user rejected or error — onchain.error has details
+      if (!res && onchain.error) {
+        toast.error(onchain.error);
+      }
+      return;
+    }
+
+    // Fallback: server-side mock pipeline
     setExecuting(true);
     try {
       const { swapId } = await executeSwap({
@@ -133,7 +172,6 @@ function SwapPanel() {
       toast.success("Swap queued — track live in History", {
         action: { label: "Open", onClick: () => navigate({ to: "/account/history" }) },
       });
-      // also subtly clear the form state
       void swapId;
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Swap failed");
