@@ -1,9 +1,8 @@
 import { createConfig, http } from "wagmi";
 import { mainnet, base, arbitrum, optimism, polygon } from "wagmi/chains";
 import { injected, walletConnect } from "wagmi/connectors";
+import { arcTestnet } from "./arc-testnet";
 
-// WalletConnect Project ID is a public identifier (safe to expose).
-// Get one for free at https://cloud.reown.com — set VITE_WALLETCONNECT_PROJECT_ID.
 const WC_PROJECT_ID =
   (import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined)?.trim() || "";
 
@@ -26,9 +25,10 @@ const connectors = [
 ];
 
 export const wagmiConfig = createConfig({
-  chains: [base, mainnet, arbitrum, optimism, polygon],
+  chains: [arcTestnet, base, mainnet, arbitrum, optimism, polygon],
   connectors,
   transports: {
+    [arcTestnet.id]: http("https://rpc.testnet.arc.network"),
     [base.id]: http(),
     [mainnet.id]: http(),
     [arbitrum.id]: http(),
@@ -38,8 +38,8 @@ export const wagmiConfig = createConfig({
   ssr: true,
 });
 
-// Map between our internal chain ids (lowercase string) and EVM chainId numbers.
 export const CHAIN_ID_MAP: Record<string, number> = {
+  "arc-testnet": arcTestnet.id,
   base: base.id,
   ethereum: mainnet.id,
   arbitrum: arbitrum.id,
