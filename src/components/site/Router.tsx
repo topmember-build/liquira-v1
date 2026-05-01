@@ -221,7 +221,7 @@ function SwapPanel() {
           <span>MIN · {minReceived.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
         </div>
         <div className="mt-2 flex items-center justify-between gap-3">
-          <div key={pulseKey} className="font-mono text-3xl text-foreground tabular-nums animate-fade-in">
+          <div key={pulseKey} className="font-mono text-3xl text-foreground tabular-nums animate-quote-in">
             {(quote?.amountOut ?? estOut).toLocaleString(undefined, { maximumFractionDigits: 4 })}
           </div>
           <TokenSelect value={toToken} onChange={(v) => setToToken(v)} />
