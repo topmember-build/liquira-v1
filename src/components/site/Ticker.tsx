@@ -38,8 +38,10 @@ export function Ticker() {
     PAIRS.map((pair) => ({ pair, price: 0, pct: 0, up: true, flash: 0 })),
   );
   const lastSeenAt = useRef<string | null>(null);
+  // Keep a stable ref to crossRate so the effect doesn't re-run when the fn ref changes
+  const crossRateRef = useRef(crossRate);
+  crossRateRef.current = crossRate;
 
-  // When the upstream feed updates, recompute prices and flash any movers.
   useEffect(() => {
     if (!feed) return;
     if (lastSeenAt.current === feed.fetchedAt) return;
@@ -47,7 +49,7 @@ export function Ticker() {
     setTicks((prev) =>
       prev.map((t) => {
         const [a, b] = t.pair.split("/");
-        const next = crossRate(a, b);
+        const next = crossRateRef.current(a, b);
         if (!next) return t;
         const old = t.price || next;
         const pct = ((next - old) / old) * 100;
@@ -60,7 +62,7 @@ export function Ticker() {
         };
       }),
     );
-  }, [feed, crossRate]);
+  }, [feed]);
 
   const items = [...ticks, ...ticks, ...ticks];
 
@@ -95,16 +97,31 @@ export function Ticker() {
 }
 
 export function StatusBar() {
-  const { feed, error } = usePrices();
+  const { feed, error, failCount } = usePrices();
   const live = !!feed && !error;
+  const stale = !!feed && !!error; // have old data but current poll failing
   const ts = feed ? new Date(feed.fetchedAt).toLocaleTimeString() : "—";
+
+  let statusLabel: string;
+  let dotClass: string;
+  if (live) {
+    statusLabel = `LIVE FEED · COINGECKO + EXCHANGERATE.HOST · ${ts}`;
+    dotClass = "animate-pulse-soft bg-primary";
+  } else if (stale) {
+    statusLabel = `STALE (${failCount} fail${failCount > 1 ? "s" : ""}) · LAST OK ${ts}`;
+    dotClass = "animate-pulse-soft bg-warning";
+  } else {
+    statusLabel = "FEED OFFLINE — FALLBACK";
+    dotClass = "bg-destructive";
+  }
+
   return (
     <div className="border-b border-border bg-background py-2">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
         <span>LIQUIRA · FX ROUTER · V0.3.1</span>
         <span className="hidden md:flex items-center gap-2">
-          <span className={`h-1.5 w-1.5 rounded-full ${live ? "animate-pulse-soft bg-primary" : "bg-destructive"}`} />
-          {live ? "LIVE FEED · COINGECKO + EXCHANGERATE.HOST" : "FEED OFFLINE — FALLBACK"} · {ts}
+          <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+          {statusLabel}
         </span>
         <span>EDITION N° 0001 · ARC TESTNET</span>
       </div>
