@@ -18,7 +18,6 @@ const SimulateInput = z.object({
 });
 
 export const simulateSwap = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((d) => SimulateInput.parse(d))
   .handler(async ({ data }) => {
     const quote = computeQuote({
