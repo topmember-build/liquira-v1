@@ -221,7 +221,7 @@ function SwapPanel() {
           <span>MIN · {minReceived.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
         </div>
         <div className="mt-2 flex items-center justify-between gap-3">
-          <div key={pulseKey} className="font-mono text-3xl text-foreground tabular-nums animate-fade-in">
+          <div key={pulseKey} className="font-mono text-3xl text-foreground tabular-nums animate-quote-in">
             {(quote?.amountOut ?? estOut).toLocaleString(undefined, { maximumFractionDigits: 4 })}
           </div>
           <TokenSelect value={toToken} onChange={(v) => setToToken(v)} />
@@ -257,13 +257,13 @@ function SwapPanel() {
         </div>
       </div>
 
-      {/* Animated route impact */}
-      <div className="mt-4 border border-border bg-surface-1 p-4">
+      {/* Route impact details panel */}
+      <div className="mt-4 border border-border bg-surface-1 p-4 space-y-3">
         <div className="flex items-center justify-between text-mono-label">
           <span>ROUTE IMPACT PREVIEW</span>
           <span className={impactColor}>{(priceImpactBps / 100).toFixed(3)}%</span>
         </div>
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-2">
+        <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
           <div
             key={pulseKey}
             className={`h-full transition-all duration-700 ease-out ${
@@ -272,13 +272,48 @@ function SwapPanel() {
             style={{ width: `${impactWidth}%` }}
           />
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-2 font-mono text-[11px]">
+
+        {/* Multi-hop path visualization */}
+        {quote?.route && quote.route.length > 0 && (
+          <div className="space-y-1 pt-1">
+            <div className="text-mono-label" style={{ fontSize: 9 }}>ROUTE PATH</div>
+            {quote.route.map((leg, i) => {
+              const legRate = leg.fromToken === leg.toToken ? 1 : crossRate(leg.fromToken, leg.toToken) || (quote.midRate ?? liveRate);
+              return (
+                <div key={i} className="flex items-center gap-2 font-mono text-[11px]">
+                  <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest ${
+                    leg.kind === "bridge" ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary"
+                  }`}>
+                    {leg.kind}
+                  </span>
+                  <span className="text-foreground">{leg.fromToken}</span>
+                  <span className="text-muted-foreground">→</span>
+                  <span className="text-foreground">{leg.toToken}</span>
+                  {leg.fromChain !== leg.toChain && (
+                    <span className="text-muted-foreground text-[9px]">({leg.fromChain}→{leg.toChain})</span>
+                  )}
+                  <span className="ml-auto tabular-nums text-muted-foreground">
+                    {leg.fromToken !== leg.toToken ? legRate.toFixed(6) : "1:1"}
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">{leg.fee_bps}bps</span>
+                  <span className="text-[9px] text-muted-foreground">{leg.protocol}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="grid grid-cols-4 gap-2 font-mono text-[11px]">
           <div>
             <div className="text-mono-label" style={{ fontSize: 9 }}>RATE</div>
             <div className="tabular-nums">{(quote?.rate ?? liveRate).toFixed(6)}</div>
           </div>
           <div>
-            <div className="text-mono-label" style={{ fontSize: 9 }}>FEES</div>
+            <div className="text-mono-label" style={{ fontSize: 9 }}>PROTOCOL FEE</div>
+            <div className="tabular-nums">{((quote?.protocolFeeBps ?? 4) / 100).toFixed(2)}%</div>
+          </div>
+          <div>
+            <div className="text-mono-label" style={{ fontSize: 9 }}>TOTAL FEE</div>
             <div className="tabular-nums">{((quote?.totalFeeBps ?? 4) / 100).toFixed(3)}%</div>
           </div>
           <div>

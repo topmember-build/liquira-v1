@@ -1,21 +1,21 @@
 /**
- * Live price feed.
+ * Live price feed with hardened caching.
  *
  * Sources:
  *   - Coingecko: USDC, USDT, DAI, EURC, EURS, PYUSD (USD-priced)
  *   - exchangerate.host: fiat pegs for KRW, JPY, GBP, BRL, MXN, SGD, NGN
  *
- * The handler caches results in-memory for ~25s to stay well under public
- * API rate limits. The client polls this server function every 15-20s.
- *
- * Output is a flat object: { [SYMBOL]: usdPrice }, plus a `fxRates` map
- * { USD, EUR, GBP, NGN, ... } so the UI can convert displayed amounts.
+ * Caching strategy:
+ *   - Fresh cache (<25s): return immediately
+ *   - Stale cache (25s–5min): attempt refresh, fall back to stale on failure
+ *   - Dead cache (>5min): attempt refresh, fall back to static fallback
+ *   - On API failure: always return the last known good data, never throw
  */
 import { createServerFn } from "@tanstack/react-start";
 import { STABLES } from "@/lib/stables";
 
-type FxRates = Record<string, number>; // 1 USD -> X of currency
-type Prices = Record<string, number>; // token symbol -> USD price
+type FxRates = Record<string, number>;
+type Prices = Record<string, number>;
 
 type PriceFeed = {
   prices: Prices;
@@ -25,7 +25,8 @@ type PriceFeed = {
 };
 
 let cache: { at: number; data: PriceFeed } | null = null;
-const CACHE_MS = 25_000;
+const FRESH_MS = 25_000;
+const STALE_MAX_MS = 5 * 60_000; // serve stale up to 5 minutes
 
 const COINGECKO_IDS: Record<string, string> = {
   USDC: "usd-coin",
@@ -36,7 +37,6 @@ const COINGECKO_IDS: Record<string, string> = {
   EURS: "stasis-eurs",
 };
 
-// Symbols we resolve via fiat FX (peg currency -> usd value)
 const FIAT_PEGS: Record<string, string> = {
   KRW1: "KRW",
   JPYC: "JPY",
@@ -49,11 +49,21 @@ const FIAT_PEGS: Record<string, string> = {
   NGNX: "NGN",
 };
 
+async function fetchWithTimeout(url: string, ms = 6000): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { signal: ctrl.signal, headers: { accept: "application/json" } });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function fetchCoingecko(): Promise<Prices> {
   const ids = Array.from(new Set(Object.values(COINGECKO_IDS))).join(",");
   const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`;
   try {
-    const res = await fetch(url, { headers: { accept: "application/json" } });
+    const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error(`coingecko ${res.status}`);
     const json = (await res.json()) as Record<string, { usd: number }>;
     const out: Prices = {};
@@ -70,10 +80,9 @@ async function fetchCoingecko(): Promise<Prices> {
 
 async function fetchFxRates(): Promise<FxRates> {
   const symbols = Array.from(new Set(Object.values(FIAT_PEGS))).join(",");
-  // exchangerate.host: base USD, returns rates in target currencies
   const url = `https://api.exchangerate.host/latest?base=USD&symbols=${symbols},EUR,GBP`;
   try {
-    const res = await fetch(url, { headers: { accept: "application/json" } });
+    const res = await fetchWithTimeout(url);
     if (!res.ok) throw new Error(`exchangerate.host ${res.status}`);
     const json = (await res.json()) as { rates?: Record<string, number> };
     const rates = json.rates ?? {};
@@ -85,11 +94,9 @@ async function fetchFxRates(): Promise<FxRates> {
 }
 
 function fallbackPrices(): { prices: Prices; fxRates: FxRates } {
-  // Use the static peg values as a last-resort fallback.
   const prices: Prices = {};
   const fxRates: FxRates = { USD: 1 };
   for (const s of STABLES) prices[s.symbol] = s.pegValueUsd;
-  // crude: invert pegValueUsd of the canonical fiat tokens to derive fx rates
   fxRates.EUR = 1 / 1.0825;
   fxRates.GBP = 1 / 1.27;
   fxRates.NGN = 1 / 0.00062;
@@ -101,15 +108,8 @@ function fallbackPrices(): { prices: Prices; fxRates: FxRates } {
   return { prices, fxRates };
 }
 
-export const getLivePrices = createServerFn({ method: "GET" }).handler(async () => {
-  const now = Date.now();
-  if (cache && now - cache.at < CACHE_MS) {
-    return cache.data;
-  }
-
-  const [coingecko, fxRates] = await Promise.all([fetchCoingecko(), fetchFxRates()]);
+function buildFeed(coingecko: Prices, fxRates: FxRates): PriceFeed {
   const fb = fallbackPrices();
-
   const prices: Prices = { ...fb.prices, ...coingecko };
   const rates: FxRates = { ...fb.fxRates, ...fxRates };
 
@@ -117,19 +117,17 @@ export const getLivePrices = createServerFn({ method: "GET" }).handler(async () 
   for (const [sym, fiat] of Object.entries(FIAT_PEGS)) {
     const r = rates[fiat];
     if (typeof r === "number" && r > 0) {
-      prices[sym] = 1 / r; // USD per 1 unit of token (which pegs to fiat)
+      prices[sym] = 1 / r;
     }
   }
 
-  // Add tiny per-fetch jitter (<5bps) so consecutive UI ticks vary slightly
-  // even when the upstream values are identical between polls. This is
-  // intentional — real markets do, and 25s coingecko cache is too coarse.
+  // Tiny per-fetch jitter (<5bps) for visual liveliness
   for (const k of Object.keys(prices)) {
-    const j = (Math.random() * 2 - 1) * 0.0004; // ±4 bps
+    const j = (Math.random() * 2 - 1) * 0.0004;
     prices[k] = prices[k] * (1 + j);
   }
 
-  const data: PriceFeed = {
+  return {
     prices,
     fxRates: rates,
     fetchedAt: new Date().toISOString(),
@@ -138,7 +136,37 @@ export const getLivePrices = createServerFn({ method: "GET" }).handler(async () 
       exchangeRate: Object.keys(fxRates).length > 1,
     },
   };
-  cache = { at: now, data };
+}
+
+export const getLivePrices = createServerFn({ method: "GET" }).handler(async () => {
+  const now = Date.now();
+
+  // Serve fresh cache immediately
+  if (cache && now - cache.at < FRESH_MS) {
+    return cache.data;
+  }
+
+  // Attempt a live refresh
+  const [coingecko, fxRates] = await Promise.all([fetchCoingecko(), fetchFxRates()]);
+  const gotLiveData = Object.keys(coingecko).length > 0 || Object.keys(fxRates).length > 1;
+
+  if (gotLiveData) {
+    const data = buildFeed(coingecko, fxRates);
+    cache = { at: now, data };
+    return data;
+  }
+
+  // APIs both failed — serve stale cache if within grace period
+  if (cache && now - cache.at < STALE_MAX_MS) {
+    console.warn("[prices] APIs failed, serving stale cache from", cache.data.fetchedAt);
+    return cache.data;
+  }
+
+  // No cache or too old — use static fallback
+  console.warn("[prices] APIs failed, no usable cache, serving static fallback");
+  const fb = fallbackPrices();
+  const data = buildFeed({}, { USD: 1 });
+  // Don't update cache timestamp — next call should retry APIs
   return data;
 });
 
