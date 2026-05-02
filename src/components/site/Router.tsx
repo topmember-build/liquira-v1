@@ -110,7 +110,7 @@ function SwapPanel() {
           data: {
             fromToken,
             toToken,
-            fromChain: isArcTestnet ? "arc-testnet" : "base",
+            fromChain: "arc-testnet",
             toChain: "arc-testnet",
             amount,
             slippageBps: Math.round(slippagePct * 100),
@@ -179,8 +179,8 @@ function SwapPanel() {
         data: {
           fromToken,
           toToken,
-          fromChain: "base",
-          toChain: routeMode === "multihop" ? "arbitrum" : "base",
+          fromChain: "arc-testnet",
+          toChain: "arc-testnet",
           amount,
           slippageBps: Math.round(slippagePct * 100),
           source: "web",
