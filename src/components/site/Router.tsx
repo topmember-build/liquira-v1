@@ -66,6 +66,8 @@ function SwapPanel() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [pulseKey, setPulseKey] = useState(0);
   const [onchainBal, setOnchainBal] = useState<number | null>(null);
+  const [treasury, setTreasury] = useState<string>(() => getTreasuryAddress());
+  const [claims, setClaims] = useState<FaucetClaim[]>(() => readClaims());
 
   const amount = Number(amountStr) || 0;
   const liveRate = crossRate(fromToken, toToken) || 0;
@@ -74,12 +76,26 @@ function SwapPanel() {
   // Detect if wallet is on Arc Testnet
   const isArcTestnet = CHAIN_ID_REVERSE[evmChainId] === "arc-testnet";
 
-  // Fetch on-chain USDC balance when on Arc
+  // Fetch on-chain USDC balance + estimate gas when on Arc
   useEffect(() => {
     if (isArcTestnet && wallet.connected) {
       onchain.usdcBalance().then((b) => setOnchainBal(b));
     }
   }, [isArcTestnet, wallet.connected, wallet.address, onchain.usdcBalance]);
+
+  // Refresh treasury from storage in case settings page updated it
+  useEffect(() => {
+    setTreasury(getTreasuryAddress());
+  }, []);
+
+  // Live gas estimate (debounced) when on Arc with valid amount
+  useEffect(() => {
+    if (!isArcTestnet || !wallet.connected || !amount || amount <= 0) return;
+    const id = setTimeout(() => {
+      void onchain.estimateGas(amount);
+    }, 600);
+    return () => clearTimeout(id);
+  }, [isArcTestnet, wallet.connected, amount, onchain.estimateGas]);
 
   // Auto-simulate (debounced)
   useEffect(() => {
