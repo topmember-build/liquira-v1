@@ -3,7 +3,14 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { CHAINS } from "@/lib/stables";
+import { useTheme } from "@/contexts/ThemeContext";
+import {
+  getTreasuryAddress,
+  setTreasuryAddress,
+  resetTreasuryAddress,
+  isAddress,
+  DEFAULT_TREASURY_ADDRESS,
+} from "@/lib/treasury";
 
 export const Route = createFileRoute("/account/preferences")({
   component: PreferencesPage,
