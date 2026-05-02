@@ -236,7 +236,10 @@ function PreferencesPage() {
             {(["dark", "light"] as const).map((t) => (
               <button
                 key={t}
-                onClick={() => setProfile({ ...profile, theme: t })}
+                onClick={() => {
+                  setProfile({ ...profile, theme: t });
+                  applyTheme(t);
+                }}
                 className={`flex-1 border px-3 py-2 font-mono text-[11px] uppercase tracking-widest ${
                   profile.theme === t
                     ? "border-primary text-primary"
