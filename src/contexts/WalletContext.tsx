@@ -84,7 +84,7 @@ function InnerWalletProvider({ children }: { children: ReactNode }) {
     return "injected";
   }, [connector]);
 
-  const chainId = CHAIN_ID_REVERSE[evmChainId] ?? "base";
+  const chainId = CHAIN_ID_REVERSE[evmChainId] ?? "arc-testnet";
 
   const balances = useMemo(
     () => (address ? fakeStableBalances(address.toLowerCase()) : {}),

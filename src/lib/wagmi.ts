@@ -1,5 +1,4 @@
 import { createConfig, http } from "wagmi";
-import { mainnet, base, arbitrum, optimism, polygon } from "wagmi/chains";
 import { injected, walletConnect } from "wagmi/connectors";
 import { arcTestnet } from "./arc-testnet";
 
@@ -24,27 +23,18 @@ const connectors = [
     : []),
 ];
 
+// Arc Testnet only — additional chains will be added in future releases.
 export const wagmiConfig = createConfig({
-  chains: [arcTestnet, base, mainnet, arbitrum, optimism, polygon],
+  chains: [arcTestnet],
   connectors,
   transports: {
     [arcTestnet.id]: http("https://rpc.testnet.arc.network"),
-    [base.id]: http(),
-    [mainnet.id]: http(),
-    [arbitrum.id]: http(),
-    [optimism.id]: http(),
-    [polygon.id]: http(),
   },
   ssr: true,
 });
 
 export const CHAIN_ID_MAP: Record<string, number> = {
   "arc-testnet": arcTestnet.id,
-  base: base.id,
-  ethereum: mainnet.id,
-  arbitrum: arbitrum.id,
-  optimism: optimism.id,
-  polygon: polygon.id,
 };
 
 export const CHAIN_ID_REVERSE: Record<number, string> = Object.fromEntries(

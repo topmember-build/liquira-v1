@@ -1,11 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { LogOut, User as UserIcon, Wallet as WalletIcon } from "lucide-react";
+import { LogOut, User as UserIcon, Wallet as WalletIcon, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { CHAINS } from "@/lib/stables";
 import { NotificationBell } from "./NotificationBell";
 import { useDisplayCurrency, type DisplayCurrency } from "@/contexts/DisplayCurrencyContext";
+import { useTheme } from "@/contexts/ThemeContext";
 
 export function Header() {
   return (
@@ -42,12 +43,28 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           <CurrencySwitcher />
+          <ThemeToggle />
           <NotificationBell />
           <AuthButton />
           <WalletButton />
         </div>
       </div>
     </header>
+  );
+}
+
+function ThemeToggle() {
+  const { theme, toggle } = useTheme();
+  const isDark = theme === "dark";
+  return (
+    <button
+      onClick={toggle}
+      title={`Switch to ${isDark ? "light" : "dark"} mode`}
+      aria-label="Toggle theme"
+      className="grid h-7 w-7 place-items-center border border-border text-muted-foreground hover:bg-surface-1 hover:text-foreground"
+    >
+      {isDark ? <Sun size={13} /> : <Moon size={13} />}
+    </button>
   );
 }
 

@@ -5,6 +5,7 @@ import { WalletProvider } from "@/contexts/WalletContext";
 import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { PricesProvider } from "@/contexts/PricesContext";
 import { DisplayCurrencyProvider } from "@/contexts/DisplayCurrencyContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 import appCss from "../styles.css?url";
 
@@ -66,6 +67,7 @@ export const Route = createRootRoute({
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {
+  // Default `dark` class — ThemeProvider will toggle it on the client.
   return (
     <html lang="en" className="dark">
       <head>
@@ -73,7 +75,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
-        <Toaster position="bottom-right" theme="dark" richColors closeButton />
+        <Toaster position="bottom-right" richColors closeButton />
         <Scripts />
       </body>
     </html>
@@ -83,15 +85,17 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   return (
     <AuthProvider>
-      <PricesProvider>
-        <DisplayCurrencyProvider>
-          <NotificationsProvider>
-            <WalletProvider>
-              <Outlet />
-            </WalletProvider>
-          </NotificationsProvider>
-        </DisplayCurrencyProvider>
-      </PricesProvider>
+      <ThemeProvider>
+        <PricesProvider>
+          <DisplayCurrencyProvider>
+            <NotificationsProvider>
+              <WalletProvider>
+                <Outlet />
+              </WalletProvider>
+            </NotificationsProvider>
+          </DisplayCurrencyProvider>
+        </PricesProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

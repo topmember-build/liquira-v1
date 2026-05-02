@@ -3,7 +3,14 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { CHAINS } from "@/lib/stables";
+import { useTheme } from "@/contexts/ThemeContext";
+import {
+  getTreasuryAddress,
+  setTreasuryAddress,
+  resetTreasuryAddress,
+  isAddress,
+  DEFAULT_TREASURY_ADDRESS,
+} from "@/lib/treasury";
 
 export const Route = createFileRoute("/account/preferences")({
   component: PreferencesPage,
@@ -26,9 +33,11 @@ type Profile = {
 function PreferencesPage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { setTheme: applyTheme } = useTheme();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [treasury, setTreasury] = useState<string>(() => getTreasuryAddress());
 
   useEffect(() => {
     if (!user) return;
@@ -137,21 +146,66 @@ function PreferencesPage() {
               className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-[12px] outline-none focus:border-primary"
             />
           </Field>
-          <Field label="PREFERRED CHAIN">
-            <select
-              value={profile.preferred_chain}
-              onChange={(e) => setProfile({ ...profile, preferred_chain: e.target.value })}
-              className="w-full rounded border border-border bg-background px-3 py-2 font-mono text-[12px] outline-none focus:border-primary"
-            >
-              <option value="arc-testnet">arc-testnet</option>
-              {CHAINS.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.id}
-                </option>
-              ))}
-            </select>
+          <Field label="PREFERRED NETWORK">
+            <div className="flex items-center gap-2 rounded border border-border bg-background px-3 py-2 font-mono text-[12px]">
+              <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-primary" />
+              <span className="text-foreground">Arc Testnet</span>
+              <span className="ml-auto text-[10px] text-muted-foreground">
+                more networks coming soon
+              </span>
+            </div>
           </Field>
         </div>
+
+        <div className="text-mono-label mb-4 mt-8" style={{ fontSize: 10 }}>
+          ARC SMOKE-TEST TREASURY
+        </div>
+        <Field label="DESTINATION ADDRESS FOR ON-CHAIN USDC TRANSFERS">
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                value={treasury}
+                onChange={(e) => setTreasury(e.target.value.trim())}
+                placeholder="0x…"
+                spellCheck={false}
+                className={`flex-1 rounded border bg-background px-3 py-2 font-mono text-[12px] outline-none ${
+                  treasury && !isAddress(treasury)
+                    ? "border-destructive focus:border-destructive"
+                    : "border-border focus:border-primary"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isAddress(treasury)) {
+                    toast.error("Invalid address — must be a 0x-prefixed 40-char hex string");
+                    return;
+                  }
+                  setTreasuryAddress(treasury);
+                  toast.success("Treasury address saved");
+                }}
+                className="border border-primary/50 px-3 py-2 font-mono text-[11px] uppercase tracking-widest text-primary hover:bg-primary/10"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  resetTreasuryAddress();
+                  setTreasury(DEFAULT_TREASURY_ADDRESS);
+                  toast.success("Treasury reset to default");
+                }}
+                className="border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+              >
+                Reset
+              </button>
+            </div>
+            <p className="font-mono text-[10px] text-muted-foreground">
+              Smoke-test transfers send USDC to this address on Arc Testnet. Use your own
+              dev wallet so you can recover the funds.
+            </p>
+          </div>
+        </Field>
 
         <div className="text-mono-label mb-4 mt-8" style={{ fontSize: 10 }}>
           DISPLAY CURRENCY
@@ -182,7 +236,10 @@ function PreferencesPage() {
             {(["dark", "light"] as const).map((t) => (
               <button
                 key={t}
-                onClick={() => setProfile({ ...profile, theme: t })}
+                onClick={() => {
+                  setProfile({ ...profile, theme: t });
+                  applyTheme(t);
+                }}
                 className={`flex-1 border px-3 py-2 font-mono text-[11px] uppercase tracking-widest ${
                   profile.theme === t
                     ? "border-primary text-primary"
