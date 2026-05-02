@@ -33,9 +33,11 @@ type Profile = {
 function PreferencesPage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { setTheme: applyTheme } = useTheme();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [treasury, setTreasury] = useState<string>(() => getTreasuryAddress());
 
   useEffect(() => {
     if (!user) return;
