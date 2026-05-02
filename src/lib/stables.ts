@@ -6,13 +6,9 @@ export type Chain = {
   nativeSymbol: string;
 };
 
+// Only Arc Testnet is supported today. Other chains will return in future updates.
 export const CHAINS: Chain[] = [
   { id: "arc-testnet", name: "Arc Testnet", shortName: "ARC", explorer: "https://testnet.arcscan.app", nativeSymbol: "USDC" },
-  { id: "base", name: "Base", shortName: "BASE", explorer: "https://basescan.org", nativeSymbol: "ETH" },
-  { id: "ethereum", name: "Ethereum", shortName: "ETH", explorer: "https://etherscan.io", nativeSymbol: "ETH" },
-  { id: "arbitrum", name: "Arbitrum One", shortName: "ARB", explorer: "https://arbiscan.io", nativeSymbol: "ETH" },
-  { id: "optimism", name: "Optimism", shortName: "OP", explorer: "https://optimistic.etherscan.io", nativeSymbol: "ETH" },
-  { id: "polygon", name: "Polygon", shortName: "MATIC", explorer: "https://polygonscan.com", nativeSymbol: "MATIC" },
 ];
 
 export type Stable = {
