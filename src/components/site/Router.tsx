@@ -446,6 +446,7 @@ function SwapPanel() {
 const PHASE_LABELS: Record<SwapPhase, string> = {
   idle: "Ready",
   "switching-chain": "Switching to Arc Testnet…",
+  "estimating-gas": "Estimating gas…",
   simulating: "Simulating contract call…",
   "awaiting-wallet": "Confirm in wallet…",
   pending: "Waiting for receipt…",
