@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Send, ArrowDownUp, Settings, ExternalLink, Droplets } from "lucide-react";
+import { Loader2, Send, ArrowDownUp, Settings, ExternalLink, Droplets, RotateCcw, Check, AlertTriangle } from "lucide-react";
 import { SectionHeader } from "./Capabilities";
 import { STABLES } from "@/lib/stables";
 import { usePrices } from "@/contexts/PricesContext";
@@ -11,6 +11,8 @@ import { simulateSwap, executeSwap } from "@/server/swaps.functions";
 import { useOnchainSwap, type SwapPhase } from "@/hooks/use-onchain-swap";
 import { FAUCETS, SMOKE_TEST_ONLY } from "@/lib/arc-testnet";
 import { CHAIN_ID_REVERSE } from "@/lib/wagmi";
+import { getTreasuryAddress } from "@/lib/treasury";
+import { readClaims, recordClaim, timeAgo, type FaucetClaim } from "@/lib/faucet-tracker";
 import type { Quote } from "@/lib/quote-engine";
 import { useNavigate } from "@tanstack/react-router";
 import { useChainId } from "wagmi";
