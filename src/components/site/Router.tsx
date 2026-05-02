@@ -384,20 +384,98 @@ function SwapPanel() {
       </div>
 
       {/* On-chain phase indicator (Arc Testnet) */}
-      {isArcTestnet && onchain.phase !== "idle" && (
-        <div className="mt-4 border border-border bg-surface-1 p-3 font-mono text-[11px]">
-          <div className="flex items-center gap-2">
-            <PhaseIndicator phase={onchain.phase} />
-            <span className="uppercase tracking-widest text-foreground">{phaseLabel(onchain.phase)}</span>
+      {isArcTestnet && (onchain.phase !== "idle" || onchain.gasEstimate) && (
+        <div className="mt-4 border border-border bg-surface-1 p-3 font-mono text-[11px] space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <PhaseIndicator phase={onchain.phase} />
+              <span className="uppercase tracking-widest text-foreground">{phaseLabel(onchain.phase)}</span>
+            </div>
+            {(onchain.phase === "failed" || onchain.phase === "confirmed") && (
+              <button
+                onClick={onchain.reset}
+                className="border border-border px-2 py-0.5 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+              >
+                Reset
+              </button>
+            )}
           </div>
-          {onchain.result && (
-            <div className="mt-2 space-y-1 text-muted-foreground">
-              <div>TX: <a href={onchain.result.explorerUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">{onchain.result.txHash.slice(0, 14)}…<ExternalLink size={10} className="ml-1 inline" /></a></div>
-              <div>Gas used: {onchain.result.gasUsed.toString()}</div>
-              <div>Transfer event: {onchain.result.transferVerified ? "✓ verified" : "✗ not found"}</div>
+
+          {/* Pre-flight gas + treasury (shown before broadcast) */}
+          {onchain.gasEstimate && !onchain.result && (
+            <div className="grid grid-cols-2 gap-2 border-t border-border pt-2 text-muted-foreground">
+              <div>
+                <div className="text-mono-label" style={{ fontSize: 9 }}>EST. GAS</div>
+                <div className="tabular-nums text-foreground">
+                  {onchain.gasEstimate.gasUnits.toLocaleString()} units
+                </div>
+                <div className="text-[10px] tabular-nums">
+                  ≈ {onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC
+                </div>
+              </div>
+              <div>
+                <div className="text-mono-label" style={{ fontSize: 9 }}>TREASURY</div>
+                <div className="text-[10px] tabular-nums text-foreground break-all">
+                  {treasury.slice(0, 10)}…{treasury.slice(-8)}
+                </div>
+                <a href="/account/preferences" className="text-[10px] text-primary hover:underline">
+                  Change in settings →
+                </a>
+              </div>
             </div>
           )}
-          {onchain.error && <div className="mt-1 text-destructive">{onchain.error}</div>}
+
+          {/* Result panel */}
+          {onchain.result && (
+            <div className="space-y-1 border-t border-border pt-2 text-muted-foreground">
+              <div>
+                TX:{" "}
+                <a href={onchain.result.explorerUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                  {onchain.result.txHash.slice(0, 14)}…<ExternalLink size={10} className="ml-1 inline" />
+                </a>
+              </div>
+              <div>
+                Gas used: <span className="text-foreground tabular-nums">{onchain.result.gasUsed.toLocaleString()}</span>
+                {" · "}
+                <span className="tabular-nums">{onchain.result.gasCostUsdc.toFixed(6)} USDC</span>
+              </div>
+              <div className="flex items-center gap-1">
+                {onchain.result.recipientMatch ? (
+                  <Check size={11} className="text-primary" />
+                ) : (
+                  <AlertTriangle size={11} className="text-destructive" />
+                )}
+                Recipient match: <span className={onchain.result.recipientMatch ? "text-primary" : "text-destructive"}>
+                  {onchain.result.recipientMatch ? "verified" : "mismatch"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                {onchain.result.amountMatch ? (
+                  <Check size={11} className="text-primary" />
+                ) : (
+                  <AlertTriangle size={11} className="text-destructive" />
+                )}
+                Amount match: <span className={onchain.result.amountMatch ? "text-primary" : "text-destructive"}>
+                  {onchain.result.verifiedAmountUsdc !== null
+                    ? `${onchain.result.verifiedAmountUsdc} / ${onchain.result.expectedAmountUsdc} USDC`
+                    : "no Transfer event"}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {onchain.error && (
+            <div className="border-t border-border pt-2 text-destructive">{onchain.error}</div>
+          )}
+
+          {onchain.canRetry && onchain.phase === "failed" && (
+            <button
+              onClick={() => void onchain.retry()}
+              className="flex w-full items-center justify-center gap-1 border border-primary/50 bg-primary/10 px-2 py-1.5 text-[11px] uppercase tracking-widest text-primary hover:bg-primary/20"
+            >
+              <RotateCcw size={11} /> Retry transfer
+            </button>
+          )}
         </div>
       )}
 
@@ -432,25 +510,54 @@ function SwapPanel() {
         </span>
       </div>
 
-      {/* Faucet links (Arc Testnet) */}
+      {/* Faucet links + claim tracker (Arc Testnet) */}
       {isArcTestnet && (
-        <div className="mt-3 border border-border bg-surface-1 p-3">
-          <div className="flex items-center gap-1 text-mono-label" style={{ fontSize: 9 }}>
-            <Droplets size={10} /> TESTNET FAUCETS
+        <div className="mt-3 border border-border bg-surface-1 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1 text-mono-label" style={{ fontSize: 9 }}>
+              <Droplets size={10} /> TESTNET USDC FAUCETS
+            </div>
+            <button
+              onClick={() => {
+                onchain.usdcBalance().then((b) => {
+                  setOnchainBal(b);
+                  toast.success(`Balance refreshed: ${b !== null ? b : "—"} USDC`);
+                });
+              }}
+              disabled={!wallet.connected}
+              className="border border-border px-2 py-0.5 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-surface-2 hover:text-foreground disabled:opacity-50"
+            >
+              Refresh balance
+            </button>
           </div>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {FAUCETS.map((f) => (
-              <a
-                key={f.url}
-                href={f.url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 border border-border px-2 py-1 font-mono text-[10px] text-primary hover:bg-surface-2"
-              >
-                {f.label} <ExternalLink size={8} />
-              </a>
-            ))}
+          <div className="flex flex-wrap gap-2">
+            {FAUCETS.map((f) => {
+              const claim = claims.find((c) => c.url === f.url);
+              return (
+                <a
+                  key={f.url}
+                  href={f.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => {
+                    recordClaim(f.url, f.label);
+                    setClaims(readClaims());
+                  }}
+                  className="flex items-center gap-1 border border-border px-2 py-1 font-mono text-[10px] text-primary hover:bg-surface-2"
+                  title={claim ? `Last claimed ${timeAgo(claim.attemptedAt)}` : "Open faucet"}
+                >
+                  {claim && <Check size={9} className="text-primary" />}
+                  {f.label} <ExternalLink size={8} />
+                </a>
+              );
+            })}
           </div>
+          {claims.length > 0 && (
+            <div className="text-[10px] text-muted-foreground">
+              ✓ Claimed {claims.length} faucet{claims.length === 1 ? "" : "s"} · last {timeAgo(claims[0].attemptedAt)} ·
+              {" "}after claiming, click <span className="text-foreground">Refresh balance</span>.
+            </div>
+          )}
         </div>
       )}
 
