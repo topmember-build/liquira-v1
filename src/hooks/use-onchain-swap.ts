@@ -10,7 +10,7 @@ import {
   useChainId,
   useSwitchChain,
 } from "wagmi";
-import { parseUnits, formatUnits, decodeEventLog, getAddress } from "viem";
+import { parseUnits, formatUnits, formatGwei, decodeEventLog, getAddress } from "viem";
 import {
   ARC_CONTRACTS,
   ERC20_TRANSFER_ABI,
@@ -33,6 +33,7 @@ export type SwapPhase =
 export type GasEstimate = {
   gasUnits: bigint;
   gasPriceWei: bigint;
+  gasPriceGwei: string;
   gasCostWei: bigint;
   gasCostUsdc: number; // Arc native is USDC (6 decimals)
 };
@@ -85,9 +86,14 @@ export function useOnchainSwap() {
           publicClient.getGasPrice(),
         ]);
         const gasCostWei = gasUnits * gasPriceWei;
-        // Arc native currency is USDC with 6 decimals
         const gasCostUsdc = Number(formatUnits(gasCostWei, 6));
-        const est: GasEstimate = { gasUnits, gasPriceWei, gasCostWei, gasCostUsdc };
+        const est: GasEstimate = {
+          gasUnits,
+          gasPriceWei,
+          gasPriceGwei: formatGwei(gasPriceWei),
+          gasCostWei,
+          gasCostUsdc,
+        };
         setGasEstimate(est);
         return est;
       } catch {
