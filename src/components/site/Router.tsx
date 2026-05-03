@@ -521,9 +521,41 @@ function SwapPanel() {
         </div>
       )}
 
+      {/* Pre-swap risk checks */}
+      {isArcTestnet && risks.length > 0 && (
+        <div className="mt-4 space-y-1">
+          {risks.map((r) => (
+            <div
+              key={r.id}
+              className={`flex items-start gap-2 border px-3 py-2 font-mono text-[11px] ${
+                r.level === "block"
+                  ? "border-destructive/50 bg-destructive/10 text-destructive"
+                  : "border-yellow-400/40 bg-yellow-400/10 text-yellow-400"
+              }`}
+            >
+              <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+              <span>{r.msg}</span>
+              {r.id === "treasury" && (
+                <a href="/account/preferences" className="ml-auto underline">
+                  Fix
+                </a>
+              )}
+              {r.id === "chain" && (
+                <button
+                  onClick={() => void wallet.switchChain("arc-testnet")}
+                  className="ml-auto underline"
+                >
+                  Switch
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       <button
         onClick={handleExecute}
-        disabled={executing || !amount}
+        disabled={executing || !amount || (isArcTestnet && !!blockingRisk)}
         className="mt-5 flex w-full items-center justify-center gap-2 bg-primary py-3 font-mono text-sm font-semibold tracking-wider text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
         {executing ? (
