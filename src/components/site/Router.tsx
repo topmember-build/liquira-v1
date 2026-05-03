@@ -134,6 +134,38 @@ function SwapPanel() {
     setQuote(null);
   };
 
+  // ── Pre-swap risk checks (Arc on-chain mode) ──────────────────
+  const MIN_AMOUNT_USDC = 0.000001; // 1 unit at 6 decimals
+  const risks = useMemo(() => {
+    const list: { id: string; level: "block" | "warn"; msg: string }[] = [];
+    if (!isArcTestnet) return list;
+    if (wallet.connected && evmChainId !== arcTestnet.id) {
+      list.push({ id: "chain", level: "block", msg: "Wallet is on the wrong network — switch to Arc Testnet." });
+    }
+    if (!isAddress(treasury) || /^0x0+(dead)?$/i.test(treasury)) {
+      list.push({ id: "treasury", level: "block", msg: "Smoke-test treasury address is missing or invalid. Set one in Preferences." });
+    }
+    if (amount <= 0) {
+      list.push({ id: "amount-zero", level: "block", msg: "Enter an amount greater than zero." });
+    } else if (amount < MIN_AMOUNT_USDC) {
+      list.push({ id: "amount-min", level: "block", msg: `Amount is below the minimum (${MIN_AMOUNT_USDC} USDC).` });
+    }
+    if (onchainBal !== null && amount > onchainBal) {
+      list.push({ id: "balance", level: "warn", msg: `Amount exceeds your on-chain USDC balance (${onchainBal}).` });
+    }
+    return list;
+  }, [isArcTestnet, wallet.connected, evmChainId, treasury, amount, onchainBal]);
+
+  const blockingRisk = risks.find((r) => r.level === "block");
+
+  // Auto-refresh balance after a failure or successful retry
+  useEffect(() => {
+    if (!isArcTestnet || !wallet.connected) return;
+    if (onchain.phase === "failed" || onchain.phase === "confirmed") {
+      void onchain.usdcBalance().then((b) => setOnchainBal(b));
+    }
+  }, [onchain.phase, isArcTestnet, wallet.connected, onchain.usdcBalance]);
+
   const handleExecute = async () => {
     if (!user) {
       toast.error("Sign in to execute swaps", {
