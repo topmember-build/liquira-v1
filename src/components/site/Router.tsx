@@ -439,14 +439,20 @@ function SwapPanel() {
 
           {/* Pre-flight gas + treasury (shown before broadcast) */}
           {onchain.gasEstimate && !onchain.result && (
-            <div className="grid grid-cols-2 gap-2 border-t border-border pt-2 text-muted-foreground">
-              <div>
-                <div className="text-mono-label" style={{ fontSize: 9 }}>EST. GAS</div>
-                <div className="tabular-nums text-foreground">
-                  {onchain.gasEstimate.gasUnits.toLocaleString()} units
+            <div className="grid grid-cols-2 gap-3 border-t border-border pt-2 text-muted-foreground">
+              <div className="space-y-1">
+                <div className="text-mono-label" style={{ fontSize: 9 }}>GAS BREAKDOWN</div>
+                <div className="flex justify-between">
+                  <span>Units</span>
+                  <span className="tabular-nums text-foreground">{onchain.gasEstimate.gasUnits.toLocaleString()}</span>
                 </div>
-                <div className="text-[10px] tabular-nums">
-                  ≈ {onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC
+                <div className="flex justify-between">
+                  <span>Gas price</span>
+                  <span className="tabular-nums text-foreground">{Number(onchain.gasEstimate.gasPriceGwei).toFixed(4)} gwei</span>
+                </div>
+                <div className="flex justify-between border-t border-border/50 pt-1">
+                  <span>Total</span>
+                  <span className="tabular-nums text-primary">{onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC</span>
                 </div>
               </div>
               <div>
