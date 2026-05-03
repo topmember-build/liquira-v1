@@ -9,9 +9,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { simulateSwap, executeSwap } from "@/server/swaps.functions";
 import { useOnchainSwap, type SwapPhase } from "@/hooks/use-onchain-swap";
-import { FAUCETS, SMOKE_TEST_ONLY } from "@/lib/arc-testnet";
+import { FAUCETS, SMOKE_TEST_ONLY, arcTestnet } from "@/lib/arc-testnet";
 import { CHAIN_ID_REVERSE } from "@/lib/wagmi";
-import { getTreasuryAddress } from "@/lib/treasury";
+import { getTreasuryAddress, isAddress } from "@/lib/treasury";
 import { readClaims, recordClaim, timeAgo, type FaucetClaim } from "@/lib/faucet-tracker";
 import type { Quote } from "@/lib/quote-engine";
 import { useNavigate } from "@tanstack/react-router";
@@ -134,6 +134,38 @@ function SwapPanel() {
     setQuote(null);
   };
 
+  // ── Pre-swap risk checks (Arc on-chain mode) ──────────────────
+  const MIN_AMOUNT_USDC = 0.000001; // 1 unit at 6 decimals
+  const risks = useMemo(() => {
+    const list: { id: string; level: "block" | "warn"; msg: string }[] = [];
+    if (!isArcTestnet) return list;
+    if (wallet.connected && evmChainId !== arcTestnet.id) {
+      list.push({ id: "chain", level: "block", msg: "Wallet is on the wrong network — switch to Arc Testnet." });
+    }
+    if (!isAddress(treasury) || /^0x0+(dead)?$/i.test(treasury)) {
+      list.push({ id: "treasury", level: "block", msg: "Smoke-test treasury address is missing or invalid. Set one in Preferences." });
+    }
+    if (amount <= 0) {
+      list.push({ id: "amount-zero", level: "block", msg: "Enter an amount greater than zero." });
+    } else if (amount < MIN_AMOUNT_USDC) {
+      list.push({ id: "amount-min", level: "block", msg: `Amount is below the minimum (${MIN_AMOUNT_USDC} USDC).` });
+    }
+    if (onchainBal !== null && amount > onchainBal) {
+      list.push({ id: "balance", level: "warn", msg: `Amount exceeds your on-chain USDC balance (${onchainBal}).` });
+    }
+    return list;
+  }, [isArcTestnet, wallet.connected, evmChainId, treasury, amount, onchainBal]);
+
+  const blockingRisk = risks.find((r) => r.level === "block");
+
+  // Auto-refresh balance after a failure or successful retry
+  useEffect(() => {
+    if (!isArcTestnet || !wallet.connected) return;
+    if (onchain.phase === "failed" || onchain.phase === "confirmed") {
+      void onchain.usdcBalance().then((b) => setOnchainBal(b));
+    }
+  }, [onchain.phase, isArcTestnet, wallet.connected, onchain.usdcBalance]);
+
   const handleExecute = async () => {
     if (!user) {
       toast.error("Sign in to execute swaps", {
@@ -143,6 +175,10 @@ function SwapPanel() {
     }
     if (!amount || amount <= 0) {
       toast.error("Enter an amount");
+      return;
+    }
+    if (isArcTestnet && blockingRisk) {
+      toast.error(blockingRisk.msg);
       return;
     }
 
@@ -403,14 +439,20 @@ function SwapPanel() {
 
           {/* Pre-flight gas + treasury (shown before broadcast) */}
           {onchain.gasEstimate && !onchain.result && (
-            <div className="grid grid-cols-2 gap-2 border-t border-border pt-2 text-muted-foreground">
-              <div>
-                <div className="text-mono-label" style={{ fontSize: 9 }}>EST. GAS</div>
-                <div className="tabular-nums text-foreground">
-                  {onchain.gasEstimate.gasUnits.toLocaleString()} units
+            <div className="grid grid-cols-2 gap-3 border-t border-border pt-2 text-muted-foreground">
+              <div className="space-y-1">
+                <div className="text-mono-label" style={{ fontSize: 9 }}>GAS BREAKDOWN</div>
+                <div className="flex justify-between">
+                  <span>Units</span>
+                  <span className="tabular-nums text-foreground">{onchain.gasEstimate.gasUnits.toLocaleString()}</span>
                 </div>
-                <div className="text-[10px] tabular-nums">
-                  ≈ {onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC
+                <div className="flex justify-between">
+                  <span>Gas price</span>
+                  <span className="tabular-nums text-foreground">{Number(onchain.gasEstimate.gasPriceGwei).toFixed(4)} gwei</span>
+                </div>
+                <div className="flex justify-between border-t border-border/50 pt-1">
+                  <span>Total</span>
+                  <span className="tabular-nums text-primary">{onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC</span>
                 </div>
               </div>
               <div>
@@ -479,9 +521,41 @@ function SwapPanel() {
         </div>
       )}
 
+      {/* Pre-swap risk checks */}
+      {isArcTestnet && risks.length > 0 && (
+        <div className="mt-4 space-y-1">
+          {risks.map((r) => (
+            <div
+              key={r.id}
+              className={`flex items-start gap-2 border px-3 py-2 font-mono text-[11px] ${
+                r.level === "block"
+                  ? "border-destructive/50 bg-destructive/10 text-destructive"
+                  : "border-yellow-400/40 bg-yellow-400/10 text-yellow-400"
+              }`}
+            >
+              <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+              <span>{r.msg}</span>
+              {r.id === "treasury" && (
+                <a href="/account/preferences" className="ml-auto underline">
+                  Fix
+                </a>
+              )}
+              {r.id === "chain" && (
+                <button
+                  onClick={() => void wallet.switchChain("arc-testnet")}
+                  className="ml-auto underline"
+                >
+                  Switch
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       <button
         onClick={handleExecute}
-        disabled={executing || !amount}
+        disabled={executing || !amount || (isArcTestnet && !!blockingRisk)}
         className="mt-5 flex w-full items-center justify-center gap-2 bg-primary py-3 font-mono text-sm font-semibold tracking-wider text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
         {executing ? (
