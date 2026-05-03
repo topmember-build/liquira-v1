@@ -177,6 +177,10 @@ function SwapPanel() {
       toast.error("Enter an amount");
       return;
     }
+    if (isArcTestnet && blockingRisk) {
+      toast.error(blockingRisk.msg);
+      return;
+    }
 
     // On Arc Testnet with wallet connected → real on-chain ERC20 transfer
     if (isArcTestnet && wallet.connected && SMOKE_TEST_ONLY) {
