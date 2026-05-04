@@ -1,6 +1,6 @@
 /**
  * Arc Testnet chain definition and contract addresses.
- * Smoke-test mode: on-chain USDC transfers use ERC20 transfer() to a destination address.
+ * On-chain USDC transfers use ERC20 transfer() to a destination address.
  */
 import { defineChain } from "viem";
 
