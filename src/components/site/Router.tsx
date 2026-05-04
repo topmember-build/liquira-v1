@@ -563,16 +563,16 @@ function SwapPanel() {
 
       <button
         onClick={handleExecute}
-        disabled={executing || !amount || (isArcTestnet && !!blockingRisk)}
+        disabled={executing || !amount || (isArcTestnet && SMOKE_TEST_ONLY && !!blockingRisk)}
         className="mt-5 flex w-full items-center justify-center gap-2 bg-primary py-3 font-mono text-sm font-semibold tracking-wider text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
         {executing ? (
           <>
-            <Loader2 size={14} className="animate-spin" /> {isArcTestnet ? "SENDING ON-CHAIN…" : "EXECUTING…"}
+            <Loader2 size={14} className="animate-spin" /> {isArcTestnet && SMOKE_TEST_ONLY ? "SENDING ON-CHAIN…" : "EXECUTING…"}
           </>
         ) : user ? (
           <>
-            <Send size={14} /> {isArcTestnet ? "SEND ON ARC TESTNET →" : "EXECUTE SWAP →"}
+            <Send size={14} /> {isArcTestnet && SMOKE_TEST_ONLY ? "SEND ON ARC TESTNET →" : "EXECUTE SWAP →"}
           </>
         ) : (
           <>SIGN IN TO SWAP →</>
@@ -588,7 +588,7 @@ function SwapPanel() {
               : "Permit2 enabled · 0 approvals"}
         </span>
         <span className="text-primary">
-          {isArcTestnet ? "▌smoke test" : "▌ready"}
+          {isArcTestnet && SMOKE_TEST_ONLY ? "▌smoke test" : "▌ready"}
         </span>
       </div>
 
