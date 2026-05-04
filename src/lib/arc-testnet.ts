@@ -1,6 +1,6 @@
 /**
  * Arc Testnet chain definition and contract addresses.
- * Smoke-test mode: swaps use ERC20 transfer() to a treasury address.
+ * Smoke-test mode: on-chain USDC transfers use ERC20 transfer() to a destination address.
  */
 import { defineChain } from "viem";
 
