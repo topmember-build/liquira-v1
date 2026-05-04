@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { simulateSwap, executeSwap } from "@/server/swaps.functions";
 import { useOnchainSwap, type SwapPhase } from "@/hooks/use-onchain-swap";
-import { FAUCETS, SMOKE_TEST_ONLY, arcTestnet } from "@/lib/arc-testnet";
+import { FAUCETS, arcTestnet } from "@/lib/arc-testnet";
 import { CHAIN_ID_REVERSE } from "@/lib/wagmi";
 import { getTreasuryAddress, isAddress } from "@/lib/treasury";
 import { readClaims, recordClaim, timeAgo, type FaucetClaim } from "@/lib/faucet-tracker";
@@ -144,15 +144,12 @@ function SwapPanel() {
     if (wallet.connected && evmChainId !== arcTestnet.id) {
       list.push({ id: "chain", level: "block", msg: "Wallet is on the wrong network — switch to Arc Testnet." });
     }
-    // Treasury is only relevant in smoke-test mode. Outside of it, missing/invalid
-    // treasury is a soft warning and never blocks wallet usage or swaps.
-    if (!isAddress(treasury) || /^0x0+(dead)?$/i.test(treasury)) {
+    // Treasury address is optional. If invalid, surface as a soft warning only.
+    if (treasury && (!isAddress(treasury) || /^0x0+(dead)?$/i.test(treasury))) {
       list.push({
         id: "treasury",
-        level: SMOKE_TEST_ONLY ? "block" : "warn",
-        msg: SMOKE_TEST_ONLY
-          ? "Smoke-test treasury address is missing or invalid. Set one in Preferences."
-          : "Smoke-test treasury not configured (optional — smoke test disabled).",
+        level: "warn",
+        msg: "Destination treasury address is invalid — update it in Preferences.",
       });
     }
     if (amount <= 0) {
@@ -200,7 +197,7 @@ function SwapPanel() {
     }
 
     // On Arc Testnet with wallet connected → real on-chain ERC20 transfer
-    if (isArcTestnet && wallet.connected && SMOKE_TEST_ONLY) {
+    if (isArcTestnet && wallet.connected) {
       setExecuting(true);
       onchain.reset();
       const res = await onchain.execute(amount);
@@ -436,8 +433,8 @@ function SwapPanel() {
         </div>
       </div>
 
-      {/* On-chain phase indicator (Arc Testnet) — only when smoke-test pipeline is active */}
-      {isArcTestnet && SMOKE_TEST_ONLY && (onchain.phase !== "idle" || onchain.gasEstimate) && (
+      {/* On-chain phase indicator (Arc Testnet) */}
+      {isArcTestnet && (onchain.phase !== "idle" || onchain.gasEstimate) && (
         <div className="mt-4 border border-border bg-surface-1 p-3 font-mono text-[11px] space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -549,7 +546,7 @@ function SwapPanel() {
       )}
 
       {/* Pre-swap risk checks */}
-      {isArcTestnet && SMOKE_TEST_ONLY && risks.length > 0 && (
+      {isArcTestnet && risks.length > 0 && (
         <div className="mt-4 space-y-1">
           {risks.map((r) => (
             <div
@@ -582,16 +579,16 @@ function SwapPanel() {
 
       <button
         onClick={handleExecute}
-        disabled={executing || !amount || (isArcTestnet && SMOKE_TEST_ONLY && !!blockingRisk)}
+        disabled={executing || !amount || (isArcTestnet && !!blockingRisk)}
         className="mt-5 flex w-full items-center justify-center gap-2 bg-primary py-3 font-mono text-sm font-semibold tracking-wider text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
         {executing ? (
           <>
-            <Loader2 size={14} className="animate-spin" /> {isArcTestnet && SMOKE_TEST_ONLY ? "SENDING ON-CHAIN…" : "EXECUTING…"}
+            <Loader2 size={14} className="animate-spin" /> {isArcTestnet ? "SENDING ON-CHAIN…" : "EXECUTING…"}
           </>
         ) : user ? (
           <>
-            <Send size={14} /> {isArcTestnet && SMOKE_TEST_ONLY ? "SEND ON ARC TESTNET →" : "EXECUTE SWAP →"}
+            <Send size={14} /> {isArcTestnet ? "SEND ON ARC TESTNET →" : "EXECUTE SWAP →"}
           </>
         ) : (
           <>SIGN IN TO SWAP →</>
@@ -607,12 +604,12 @@ function SwapPanel() {
               : "Permit2 enabled · 0 approvals"}
         </span>
         <span className="text-primary">
-          {isArcTestnet && SMOKE_TEST_ONLY ? "▌smoke test" : "▌ready"}
+          {isArcTestnet ? "▌arc testnet" : "▌ready"}
         </span>
       </div>
 
       {/* Faucet links + claim tracker (Arc Testnet) */}
-      {isArcTestnet && SMOKE_TEST_ONLY && (
+      {isArcTestnet && (
         <div className="mt-3 border border-border bg-surface-1 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 text-mono-label" style={{ fontSize: 9 }}>

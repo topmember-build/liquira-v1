@@ -1,5 +1,5 @@
 /**
- * User-configurable Arc smoke-test treasury address.
+ * User-configurable Arc Testnet destination (treasury) address.
  * Falls back to the default in arc-testnet.ts.
  */
 import { TREASURY_ADDRESS as DEFAULT_TREASURY } from "./arc-testnet";

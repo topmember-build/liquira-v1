@@ -158,7 +158,7 @@ function PreferencesPage() {
         </div>
 
         <div className="text-mono-label mb-4 mt-8" style={{ fontSize: 10 }}>
-          ARC SMOKE-TEST TREASURY
+          ARC TESTNET TREASURY
         </div>
         <Field label="DESTINATION ADDRESS FOR ON-CHAIN USDC TRANSFERS">
           <div className="space-y-2">
@@ -201,7 +201,7 @@ function PreferencesPage() {
               </button>
             </div>
             <p className="font-mono text-[10px] text-muted-foreground">
-              Smoke-test transfers send USDC to this address on Arc Testnet. Use your own
+              On-chain USDC transfers on Arc Testnet are sent to this address. Use your own
               dev wallet so you can recover the funds.
             </p>
           </div>

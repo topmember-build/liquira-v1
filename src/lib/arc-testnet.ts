@@ -1,6 +1,6 @@
 /**
  * Arc Testnet chain definition and contract addresses.
- * Smoke-test mode: swaps use ERC20 transfer() to a treasury address.
+ * On-chain USDC transfers use ERC20 transfer() to a destination address.
  */
 import { defineChain } from "viem";
 
@@ -25,15 +25,12 @@ export const ARC_CONTRACTS = {
   MULTICALL3: "0xcA11bde05977b3631167028862bE2a173976CA11" as const,
 };
 
-// For smoke testing, sends USDC to this address.
-// Users should replace with their own dev wallet.
+// Default destination address for on-chain USDC transfers (overridable in Preferences).
 export const TREASURY_ADDRESS = "0x000000000000000000000000000000000000dEaD" as const;
 
-// Smoke-test mode is dev-only. Disable by setting VITE_SMOKE_TEST_ONLY="false".
-// When false, the on-chain ERC20 transfer pipeline and related UI are hidden,
-// but wallet connection and the rest of the app remain fully usable.
-export const SMOKE_TEST_ONLY: boolean =
-  (import.meta.env?.VITE_SMOKE_TEST_ONLY ?? "true") !== "false";
+// Smoke-test mode is fully disabled. Kept as `false` so any remaining gates
+// behave as no-ops without needing to delete every reference at once.
+export const SMOKE_TEST_ONLY = false;
 
 // ── Minimal ERC-20 ABI for transfer ────────────────────────
 export const ERC20_TRANSFER_ABI = [

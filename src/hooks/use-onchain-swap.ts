@@ -1,5 +1,5 @@
 /**
- * Hook for executing on-chain ERC20 transfer swaps on Arc Testnet (smoke-test mode).
+ * Hook for executing on-chain ERC20 transfer swaps on Arc Testnet.
  * Pipeline: estimate gas → simulate → wallet write → wait receipt → verify Transfer event.
  */
 import { useCallback, useState } from "react";
