@@ -665,7 +665,106 @@ function SwapPanel() {
       {quote?.warnings.length ? (
         <div className="mt-2 font-mono text-[10px] text-yellow-400">⚠ {quote.warnings.join(" · ")}</div>
       ) : null}
+
+      <TransferDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        result={onchain.result}
+        error={onchain.error}
+      />
     </div>
+  );
+}
+
+function TransferDetailsDialog({
+  open,
+  onOpenChange,
+  result,
+  error,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  result: ReturnType<typeof useOnchainSwap>["result"];
+  error: string | null;
+}) {
+  if (!result) return null;
+  const verified = result.transferVerified && result.status === "success";
+  const rows: { label: string; expected: string; actual: string; match: boolean }[] = [
+    {
+      label: "Recipient",
+      expected: result.expectedRecipient,
+      actual: result.verifiedRecipient ?? "— (no Transfer event)",
+      match: result.recipientMatch,
+    },
+    {
+      label: "Amount (USDC)",
+      expected: String(result.expectedAmountUsdc),
+      actual: result.verifiedAmountUsdc !== null ? String(result.verifiedAmountUsdc) : "— (no Transfer event)",
+      match: result.amountMatch,
+    },
+    {
+      label: "Tx status",
+      expected: "success",
+      actual: result.status,
+      match: result.status === "success",
+    },
+  ];
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 font-mono text-sm uppercase tracking-widest">
+            {verified ? <Check className="text-primary" size={16} /> : <AlertTriangle className="text-destructive" size={16} />}
+            Transfer details · {verified ? "verified" : "mismatch"}
+          </DialogTitle>
+          <DialogDescription className="font-mono text-[11px]">
+            Expected vs actual fields decoded from the Transfer event.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 font-mono text-[11px]">
+          <div className="grid grid-cols-[90px,1fr,1fr,auto] gap-2 border-b border-border pb-2 text-mono-label" style={{ fontSize: 9 }}>
+            <span>FIELD</span><span>EXPECTED</span><span>ACTUAL</span><span></span>
+          </div>
+          {rows.map((r) => (
+            <div key={r.label} className="grid grid-cols-[90px,1fr,1fr,auto] items-start gap-2">
+              <span className="text-muted-foreground">{r.label}</span>
+              <span className="break-all text-foreground">{r.expected}</span>
+              <span className={`break-all ${r.match ? "text-foreground" : "text-destructive"}`}>{r.actual}</span>
+              {r.match ? (
+                <Check size={12} className="mt-0.5 text-primary" />
+              ) : (
+                <AlertTriangle size={12} className="mt-0.5 text-destructive" />
+              )}
+            </div>
+          ))}
+
+          <div className="grid grid-cols-2 gap-3 border-t border-border pt-2 text-muted-foreground">
+            <div>
+              <div className="text-mono-label" style={{ fontSize: 9 }}>GAS USED</div>
+              <div className="tabular-nums text-foreground">{result.gasUsed.toLocaleString()}</div>
+            </div>
+            <div>
+              <div className="text-mono-label" style={{ fontSize: 9 }}>GAS COST</div>
+              <div className="tabular-nums text-foreground">{result.gasCostUsdc.toFixed(6)} USDC</div>
+            </div>
+          </div>
+
+          <a
+            href={result.explorerUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1 text-primary hover:underline"
+          >
+            View on ArcScan <ExternalLink size={11} />
+          </a>
+
+          {error && (
+            <div className="border border-destructive/40 bg-destructive/10 p-2 text-destructive">{error}</div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
