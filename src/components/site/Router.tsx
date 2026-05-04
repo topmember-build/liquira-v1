@@ -144,15 +144,12 @@ function SwapPanel() {
     if (wallet.connected && evmChainId !== arcTestnet.id) {
       list.push({ id: "chain", level: "block", msg: "Wallet is on the wrong network — switch to Arc Testnet." });
     }
-    // Treasury is only relevant in smoke-test mode. Outside of it, missing/invalid
-    // treasury is a soft warning and never blocks wallet usage or swaps.
-    if (!isAddress(treasury) || /^0x0+(dead)?$/i.test(treasury)) {
+    // Treasury address is optional. If invalid, surface as a soft warning only.
+    if (treasury && (!isAddress(treasury) || /^0x0+(dead)?$/i.test(treasury))) {
       list.push({
         id: "treasury",
-        level: SMOKE_TEST_ONLY ? "block" : "warn",
-        msg: SMOKE_TEST_ONLY
-          ? "Smoke-test treasury address is missing or invalid. Set one in Preferences."
-          : "Smoke-test treasury not configured (optional — smoke test disabled).",
+        level: "warn",
+        msg: "Destination treasury address is invalid — update it in Preferences.",
       });
     }
     if (amount <= 0) {
