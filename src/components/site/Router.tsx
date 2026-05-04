@@ -176,6 +176,13 @@ function SwapPanel() {
     }
   }, [onchain.phase, isArcTestnet, wallet.connected, onchain.usdcBalance]);
 
+  // Auto-open post-execution details modal once a result is available
+  useEffect(() => {
+    if (onchain.result && (onchain.phase === "confirmed" || onchain.phase === "failed")) {
+      setDetailsOpen(true);
+    }
+  }, [onchain.result, onchain.phase]);
+
   const handleExecute = async () => {
     if (!user) {
       toast.error("Sign in to execute swaps", {
