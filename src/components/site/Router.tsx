@@ -527,14 +527,24 @@ function SwapPanel() {
             <div className="border-t border-border pt-2 text-destructive">{onchain.error}</div>
           )}
 
-          {onchain.canRetry && onchain.phase === "failed" && (
-            <button
-              onClick={() => void onchain.retry()}
-              className="flex w-full items-center justify-center gap-1 border border-primary/50 bg-primary/10 px-2 py-1.5 text-[11px] uppercase tracking-widest text-primary hover:bg-primary/20"
-            >
-              <RotateCcw size={11} /> Retry transfer
-            </button>
-          )}
+          <div className="flex gap-2">
+            {onchain.result && (
+              <button
+                onClick={() => setDetailsOpen(true)}
+                className="flex flex-1 items-center justify-center gap-1 border border-border bg-surface-2 px-2 py-1.5 text-[11px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+              >
+                <Info size={11} /> Transfer details
+              </button>
+            )}
+            {onchain.canRetry && onchain.phase === "failed" && (
+              <button
+                onClick={() => void onchain.retry()}
+                className="flex flex-1 items-center justify-center gap-1 border border-primary/50 bg-primary/10 px-2 py-1.5 text-[11px] uppercase tracking-widest text-primary hover:bg-primary/20"
+              >
+                <RotateCcw size={11} /> Retry transfer
+              </button>
+            )}
+          </div>
         </div>
       )}
 
