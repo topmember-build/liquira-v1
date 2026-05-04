@@ -593,7 +593,7 @@ function SwapPanel() {
       </div>
 
       {/* Faucet links + claim tracker (Arc Testnet) */}
-      {isArcTestnet && (
+      {isArcTestnet && SMOKE_TEST_ONLY && (
         <div className="mt-3 border border-border bg-surface-1 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 text-mono-label" style={{ fontSize: 9 }}>
