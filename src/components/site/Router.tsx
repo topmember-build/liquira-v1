@@ -197,7 +197,7 @@ function SwapPanel() {
     }
 
     // On Arc Testnet with wallet connected → real on-chain ERC20 transfer
-    if (isArcTestnet && wallet.connected && SMOKE_TEST_ONLY) {
+    if (isArcTestnet && wallet.connected) {
       setExecuting(true);
       onchain.reset();
       const res = await onchain.execute(amount);
@@ -434,7 +434,7 @@ function SwapPanel() {
       </div>
 
       {/* On-chain phase indicator (Arc Testnet) — only when smoke-test pipeline is active */}
-      {isArcTestnet && SMOKE_TEST_ONLY && (onchain.phase !== "idle" || onchain.gasEstimate) && (
+      {isArcTestnet && (onchain.phase !== "idle" || onchain.gasEstimate) && (
         <div className="mt-4 border border-border bg-surface-1 p-3 font-mono text-[11px] space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -546,7 +546,7 @@ function SwapPanel() {
       )}
 
       {/* Pre-swap risk checks */}
-      {isArcTestnet && SMOKE_TEST_ONLY && risks.length > 0 && (
+      {isArcTestnet && risks.length > 0 && (
         <div className="mt-4 space-y-1">
           {risks.map((r) => (
             <div
@@ -579,16 +579,16 @@ function SwapPanel() {
 
       <button
         onClick={handleExecute}
-        disabled={executing || !amount || (isArcTestnet && SMOKE_TEST_ONLY && !!blockingRisk)}
+        disabled={executing || !amount || (isArcTestnet && !!blockingRisk)}
         className="mt-5 flex w-full items-center justify-center gap-2 bg-primary py-3 font-mono text-sm font-semibold tracking-wider text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
         {executing ? (
           <>
-            <Loader2 size={14} className="animate-spin" /> {isArcTestnet && SMOKE_TEST_ONLY ? "SENDING ON-CHAIN…" : "EXECUTING…"}
+            <Loader2 size={14} className="animate-spin" /> {isArcTestnet ? "SENDING ON-CHAIN…" : "EXECUTING…"}
           </>
         ) : user ? (
           <>
-            <Send size={14} /> {isArcTestnet && SMOKE_TEST_ONLY ? "SEND ON ARC TESTNET →" : "EXECUTE SWAP →"}
+            <Send size={14} /> {isArcTestnet ? "SEND ON ARC TESTNET →" : "EXECUTE SWAP →"}
           </>
         ) : (
           <>SIGN IN TO SWAP →</>
@@ -604,12 +604,12 @@ function SwapPanel() {
               : "Permit2 enabled · 0 approvals"}
         </span>
         <span className="text-primary">
-          {isArcTestnet && SMOKE_TEST_ONLY ? "▌smoke test" : "▌ready"}
+          {isArcTestnet ? "▌arc testnet" : "▌ready"}
         </span>
       </div>
 
       {/* Faucet links + claim tracker (Arc Testnet) */}
-      {isArcTestnet && SMOKE_TEST_ONLY && (
+      {isArcTestnet && (
         <div className="mt-3 border border-border bg-surface-1 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 text-mono-label" style={{ fontSize: 9 }}>
