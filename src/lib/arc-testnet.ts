@@ -29,7 +29,11 @@ export const ARC_CONTRACTS = {
 // Users should replace with their own dev wallet.
 export const TREASURY_ADDRESS = "0x000000000000000000000000000000000000dEaD" as const;
 
-export const SMOKE_TEST_ONLY = true;
+// Smoke-test mode is dev-only. Disable by setting VITE_SMOKE_TEST_ONLY="false".
+// When false, the on-chain ERC20 transfer pipeline and related UI are hidden,
+// but wallet connection and the rest of the app remain fully usable.
+export const SMOKE_TEST_ONLY: boolean =
+  (import.meta.env?.VITE_SMOKE_TEST_ONLY ?? "true") !== "false";
 
 // ── Minimal ERC-20 ABI for transfer ────────────────────────
 export const ERC20_TRANSFER_ABI = [

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Send, ArrowDownUp, Settings, ExternalLink, Droplets, RotateCcw, Check, AlertTriangle } from "lucide-react";
+import { Loader2, Send, ArrowDownUp, Settings, ExternalLink, Droplets, RotateCcw, Check, AlertTriangle, Info } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SectionHeader } from "./Capabilities";
 import { STABLES } from "@/lib/stables";
 import { usePrices } from "@/contexts/PricesContext";
@@ -68,6 +69,7 @@ function SwapPanel() {
   const [onchainBal, setOnchainBal] = useState<number | null>(null);
   const [treasury, setTreasury] = useState<string>(() => getTreasuryAddress());
   const [claims, setClaims] = useState<FaucetClaim[]>(() => readClaims());
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const amount = Number(amountStr) || 0;
   const liveRate = crossRate(fromToken, toToken) || 0;
@@ -142,8 +144,16 @@ function SwapPanel() {
     if (wallet.connected && evmChainId !== arcTestnet.id) {
       list.push({ id: "chain", level: "block", msg: "Wallet is on the wrong network — switch to Arc Testnet." });
     }
+    // Treasury is only relevant in smoke-test mode. Outside of it, missing/invalid
+    // treasury is a soft warning and never blocks wallet usage or swaps.
     if (!isAddress(treasury) || /^0x0+(dead)?$/i.test(treasury)) {
-      list.push({ id: "treasury", level: "block", msg: "Smoke-test treasury address is missing or invalid. Set one in Preferences." });
+      list.push({
+        id: "treasury",
+        level: SMOKE_TEST_ONLY ? "block" : "warn",
+        msg: SMOKE_TEST_ONLY
+          ? "Smoke-test treasury address is missing or invalid. Set one in Preferences."
+          : "Smoke-test treasury not configured (optional — smoke test disabled).",
+      });
     }
     if (amount <= 0) {
       list.push({ id: "amount-zero", level: "block", msg: "Enter an amount greater than zero." });
@@ -165,6 +175,13 @@ function SwapPanel() {
       void onchain.usdcBalance().then((b) => setOnchainBal(b));
     }
   }, [onchain.phase, isArcTestnet, wallet.connected, onchain.usdcBalance]);
+
+  // Auto-open post-execution details modal once a result is available
+  useEffect(() => {
+    if (onchain.result && (onchain.phase === "confirmed" || onchain.phase === "failed")) {
+      setDetailsOpen(true);
+    }
+  }, [onchain.result, onchain.phase]);
 
   const handleExecute = async () => {
     if (!user) {
@@ -419,8 +436,8 @@ function SwapPanel() {
         </div>
       </div>
 
-      {/* On-chain phase indicator (Arc Testnet) */}
-      {isArcTestnet && (onchain.phase !== "idle" || onchain.gasEstimate) && (
+      {/* On-chain phase indicator (Arc Testnet) — only when smoke-test pipeline is active */}
+      {isArcTestnet && SMOKE_TEST_ONLY && (onchain.phase !== "idle" || onchain.gasEstimate) && (
         <div className="mt-4 border border-border bg-surface-1 p-3 font-mono text-[11px] space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -510,19 +527,29 @@ function SwapPanel() {
             <div className="border-t border-border pt-2 text-destructive">{onchain.error}</div>
           )}
 
-          {onchain.canRetry && onchain.phase === "failed" && (
-            <button
-              onClick={() => void onchain.retry()}
-              className="flex w-full items-center justify-center gap-1 border border-primary/50 bg-primary/10 px-2 py-1.5 text-[11px] uppercase tracking-widest text-primary hover:bg-primary/20"
-            >
-              <RotateCcw size={11} /> Retry transfer
-            </button>
-          )}
+          <div className="flex gap-2">
+            {onchain.result && (
+              <button
+                onClick={() => setDetailsOpen(true)}
+                className="flex flex-1 items-center justify-center gap-1 border border-border bg-surface-2 px-2 py-1.5 text-[11px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+              >
+                <Info size={11} /> Transfer details
+              </button>
+            )}
+            {onchain.canRetry && onchain.phase === "failed" && (
+              <button
+                onClick={() => void onchain.retry()}
+                className="flex flex-1 items-center justify-center gap-1 border border-primary/50 bg-primary/10 px-2 py-1.5 text-[11px] uppercase tracking-widest text-primary hover:bg-primary/20"
+              >
+                <RotateCcw size={11} /> Retry transfer
+              </button>
+            )}
+          </div>
         </div>
       )}
 
       {/* Pre-swap risk checks */}
-      {isArcTestnet && risks.length > 0 && (
+      {isArcTestnet && SMOKE_TEST_ONLY && risks.length > 0 && (
         <div className="mt-4 space-y-1">
           {risks.map((r) => (
             <div
@@ -555,16 +582,16 @@ function SwapPanel() {
 
       <button
         onClick={handleExecute}
-        disabled={executing || !amount || (isArcTestnet && !!blockingRisk)}
+        disabled={executing || !amount || (isArcTestnet && SMOKE_TEST_ONLY && !!blockingRisk)}
         className="mt-5 flex w-full items-center justify-center gap-2 bg-primary py-3 font-mono text-sm font-semibold tracking-wider text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
         {executing ? (
           <>
-            <Loader2 size={14} className="animate-spin" /> {isArcTestnet ? "SENDING ON-CHAIN…" : "EXECUTING…"}
+            <Loader2 size={14} className="animate-spin" /> {isArcTestnet && SMOKE_TEST_ONLY ? "SENDING ON-CHAIN…" : "EXECUTING…"}
           </>
         ) : user ? (
           <>
-            <Send size={14} /> {isArcTestnet ? "SEND ON ARC TESTNET →" : "EXECUTE SWAP →"}
+            <Send size={14} /> {isArcTestnet && SMOKE_TEST_ONLY ? "SEND ON ARC TESTNET →" : "EXECUTE SWAP →"}
           </>
         ) : (
           <>SIGN IN TO SWAP →</>
@@ -580,12 +607,12 @@ function SwapPanel() {
               : "Permit2 enabled · 0 approvals"}
         </span>
         <span className="text-primary">
-          {isArcTestnet ? "▌smoke test" : "▌ready"}
+          {isArcTestnet && SMOKE_TEST_ONLY ? "▌smoke test" : "▌ready"}
         </span>
       </div>
 
       {/* Faucet links + claim tracker (Arc Testnet) */}
-      {isArcTestnet && (
+      {isArcTestnet && SMOKE_TEST_ONLY && (
         <div className="mt-3 border border-border bg-surface-1 p-3 space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1 text-mono-label" style={{ fontSize: 9 }}>
@@ -638,7 +665,106 @@ function SwapPanel() {
       {quote?.warnings.length ? (
         <div className="mt-2 font-mono text-[10px] text-yellow-400">⚠ {quote.warnings.join(" · ")}</div>
       ) : null}
+
+      <TransferDetailsDialog
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        result={onchain.result}
+        error={onchain.error}
+      />
     </div>
+  );
+}
+
+function TransferDetailsDialog({
+  open,
+  onOpenChange,
+  result,
+  error,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  result: ReturnType<typeof useOnchainSwap>["result"];
+  error: string | null;
+}) {
+  if (!result) return null;
+  const verified = result.transferVerified && result.status === "success";
+  const rows: { label: string; expected: string; actual: string; match: boolean }[] = [
+    {
+      label: "Recipient",
+      expected: result.expectedRecipient,
+      actual: result.verifiedRecipient ?? "— (no Transfer event)",
+      match: result.recipientMatch,
+    },
+    {
+      label: "Amount (USDC)",
+      expected: String(result.expectedAmountUsdc),
+      actual: result.verifiedAmountUsdc !== null ? String(result.verifiedAmountUsdc) : "— (no Transfer event)",
+      match: result.amountMatch,
+    },
+    {
+      label: "Tx status",
+      expected: "success",
+      actual: result.status,
+      match: result.status === "success",
+    },
+  ];
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 font-mono text-sm uppercase tracking-widest">
+            {verified ? <Check className="text-primary" size={16} /> : <AlertTriangle className="text-destructive" size={16} />}
+            Transfer details · {verified ? "verified" : "mismatch"}
+          </DialogTitle>
+          <DialogDescription className="font-mono text-[11px]">
+            Expected vs actual fields decoded from the Transfer event.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3 font-mono text-[11px]">
+          <div className="grid grid-cols-[90px,1fr,1fr,auto] gap-2 border-b border-border pb-2 text-mono-label" style={{ fontSize: 9 }}>
+            <span>FIELD</span><span>EXPECTED</span><span>ACTUAL</span><span></span>
+          </div>
+          {rows.map((r) => (
+            <div key={r.label} className="grid grid-cols-[90px,1fr,1fr,auto] items-start gap-2">
+              <span className="text-muted-foreground">{r.label}</span>
+              <span className="break-all text-foreground">{r.expected}</span>
+              <span className={`break-all ${r.match ? "text-foreground" : "text-destructive"}`}>{r.actual}</span>
+              {r.match ? (
+                <Check size={12} className="mt-0.5 text-primary" />
+              ) : (
+                <AlertTriangle size={12} className="mt-0.5 text-destructive" />
+              )}
+            </div>
+          ))}
+
+          <div className="grid grid-cols-2 gap-3 border-t border-border pt-2 text-muted-foreground">
+            <div>
+              <div className="text-mono-label" style={{ fontSize: 9 }}>GAS USED</div>
+              <div className="tabular-nums text-foreground">{result.gasUsed.toLocaleString()}</div>
+            </div>
+            <div>
+              <div className="text-mono-label" style={{ fontSize: 9 }}>GAS COST</div>
+              <div className="tabular-nums text-foreground">{result.gasCostUsdc.toFixed(6)} USDC</div>
+            </div>
+          </div>
+
+          <a
+            href={result.explorerUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1 text-primary hover:underline"
+          >
+            View on ArcScan <ExternalLink size={11} />
+          </a>
+
+          {error && (
+            <div className="border border-destructive/40 bg-destructive/10 p-2 text-destructive">{error}</div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
