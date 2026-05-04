@@ -433,7 +433,7 @@ function SwapPanel() {
         </div>
       </div>
 
-      {/* On-chain phase indicator (Arc Testnet) — only when smoke-test pipeline is active */}
+      {/* On-chain phase indicator (Arc Testnet) */}
       {isArcTestnet && (onchain.phase !== "idle" || onchain.gasEstimate) && (
         <div className="mt-4 border border-border bg-surface-1 p-3 font-mono text-[11px] space-y-2">
           <div className="flex items-center justify-between">
