@@ -158,7 +158,7 @@ function PreferencesPage() {
         </div>
 
         <div className="text-mono-label mb-4 mt-8" style={{ fontSize: 10 }}>
-          ARC SMOKE-TEST TREASURY
+          ARC TESTNET TREASURY
         </div>
         <Field label="DESTINATION ADDRESS FOR ON-CHAIN USDC TRANSFERS">
           <div className="space-y-2">
