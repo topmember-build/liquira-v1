@@ -530,7 +530,7 @@ function SwapPanel() {
       )}
 
       {/* Pre-swap risk checks */}
-      {isArcTestnet && risks.length > 0 && (
+      {isArcTestnet && SMOKE_TEST_ONLY && risks.length > 0 && (
         <div className="mt-4 space-y-1">
           {risks.map((r) => (
             <div
