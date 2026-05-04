@@ -69,6 +69,7 @@ function SwapPanel() {
   const [onchainBal, setOnchainBal] = useState<number | null>(null);
   const [treasury, setTreasury] = useState<string>(() => getTreasuryAddress());
   const [claims, setClaims] = useState<FaucetClaim[]>(() => readClaims());
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const amount = Number(amountStr) || 0;
   const liveRate = crossRate(fromToken, toToken) || 0;
