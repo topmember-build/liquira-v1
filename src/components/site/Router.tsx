@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { simulateSwap, executeSwap } from "@/server/swaps.functions";
 import { useOnchainSwap, type SwapPhase } from "@/hooks/use-onchain-swap";
-import { FAUCETS, SMOKE_TEST_ONLY, arcTestnet } from "@/lib/arc-testnet";
+import { FAUCETS, arcTestnet } from "@/lib/arc-testnet";
 import { CHAIN_ID_REVERSE } from "@/lib/wagmi";
 import { getTreasuryAddress, isAddress } from "@/lib/treasury";
 import { readClaims, recordClaim, timeAgo, type FaucetClaim } from "@/lib/faucet-tracker";
