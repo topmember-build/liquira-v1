@@ -1,6 +1,6 @@
 /**
  * Hook for executing on-chain ERC20 transfer swaps on Arc Testnet.
- * Pipeline: estimate gas → simulate → wallet write → wait receipt → verify Transfer event.
+ * Pipeline: estimate gas, simulate, wallet write, wait receipt, verify Transfer event.
  */
 import { useCallback, useState } from "react";
 import {
@@ -9,7 +9,9 @@ import {
   useAccount,
   useChainId,
   useSwitchChain,
+  useConfig,
 } from "wagmi";
+import { getWalletClient } from "@wagmi/core";
 import { parseUnits, formatUnits, formatGwei, decodeEventLog, getAddress } from "viem";
 import {
   ARC_CONTRACTS,
