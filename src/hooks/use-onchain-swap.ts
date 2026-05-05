@@ -112,7 +112,7 @@ export function useOnchainSwap() {
       setResult(null);
       setLastAmount(amountUsdc);
 
-      if (!isConnected || !address || !walletClient || !publicClient) {
+      if (!isConnected || !address || !publicClient) {
         setError("Connect your wallet first");
         setPhase("failed");
         return null;
@@ -133,6 +133,21 @@ export function useOnchainSwap() {
           }
         }
 
+        // Resolve wallet client (hook value can lag right after connect/chain switch)
+        let wc = walletClient;
+        if (!wc) {
+          try {
+            wc = await getWalletClient(wagmiConfigRef, { chainId: arcTestnet.id });
+          } catch {
+            wc = null;
+          }
+        }
+        if (!wc) {
+          setError("Wallet client unavailable. Reconnect your wallet and try again.");
+          setPhase("failed");
+          return null;
+        }
+
         // 2. Estimate gas (best-effort; non-fatal)
         setPhase("estimating-gas");
         await estimateGas(amountUsdc);
@@ -151,7 +166,7 @@ export function useOnchainSwap() {
 
         // 4. Write transaction
         setPhase("awaiting-wallet");
-        const hash = await walletClient.writeContract(simulation.request);
+        const hash = await wc.writeContract(simulation.request);
 
         // 5. Wait for receipt
         setPhase("pending");
