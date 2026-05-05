@@ -12,7 +12,7 @@ import { simulateSwap, executeSwap } from "@/server/swaps.functions";
 import { useOnchainSwap, type SwapPhase } from "@/hooks/use-onchain-swap";
 import { FAUCETS, arcTestnet } from "@/lib/arc-testnet";
 import { CHAIN_ID_REVERSE } from "@/lib/wagmi";
-import { getTreasuryAddress, isAddress } from "@/lib/treasury";
+import { getTreasuryAddress } from "@/lib/treasury";
 import { readClaims, recordClaim, timeAgo, type FaucetClaim } from "@/lib/faucet-tracker";
 import type { Quote } from "@/lib/quote-engine";
 import { useNavigate } from "@tanstack/react-router";
@@ -29,7 +29,7 @@ export function RouterSection() {
           </h2>
           <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
             Every swap is solved across all live Arc pools. Live FX feed,
-            depth-aware impact, animated route trace — quote, simulate, and
+            depth-aware impact, animated route trace: quote, simulate, and
             execute in one panel.
           </p>
         </div>
@@ -207,7 +207,7 @@ function SwapPanel() {
       } else if (res) {
         toast.error("Transaction reverted on-chain");
       }
-      // If null, user rejected or error — onchain.error has details
+      // If null, user rejected or error: onchain.error has details
       if (!res && onchain.error) {
         toast.error(onchain.error);
       }
@@ -229,7 +229,7 @@ function SwapPanel() {
           walletAddress: wallet.address ?? undefined,
         },
       });
-      toast.success("Swap queued — track live in History", {
+      toast.success("Swap queued. Track live in History", {
         action: { label: "Open", onClick: () => navigate({ to: "/account/history" }) },
       });
       void swapId;
