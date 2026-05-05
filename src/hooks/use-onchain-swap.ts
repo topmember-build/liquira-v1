@@ -266,7 +266,7 @@ export function useOnchainSwap() {
         return null;
       }
     },
-    [isConnected, address, walletClient, publicClient, chainId, switchChainAsync, estimateGas],
+    [isConnected, address, walletClient, publicClient, chainId, switchChainAsync, estimateGas, wagmiConfigRef],
   );
 
   const retry = useCallback(async () => {
