@@ -68,6 +68,7 @@ export function useOnchainSwap() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
+  const wagmiConfigRef = useConfig();
 
   /** Estimate gas without sending a transaction. Safe to call repeatedly. */
   const estimateGas = useCallback(
