@@ -36,14 +36,14 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Liquira — Stablecoin FX rail" },
+      { title: "Liquira - Stablecoin FX rail" },
       {
         name: "description",
         content:
           "Liquira is the on-chain liquidity router for stablecoin FX. Quote, swap, schedule and automate stablecoin moves with deep liquidity and developer-grade APIs.",
       },
       { name: "author", content: "Liquira" },
-      { property: "og:title", content: "Liquira — Stablecoin FX rail" },
+      { property: "og:title", content: "Liquira - Stablecoin FX rail" },
       {
         property: "og:description",
         content: "Quote, swap and automate stablecoin moves with deep liquidity.",
@@ -67,7 +67,7 @@ export const Route = createRootRoute({
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {
-  // Default `dark` class — ThemeProvider will toggle it on the client.
+  // Default `dark` class - ThemeProvider will toggle it on the client.
   return (
     <html lang="en" className="dark">
       <head>

@@ -13,7 +13,7 @@ import { StatsPanel } from "@/components/site/StatsPanel";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Liquira — Stablecoin FX Router on Arc Network" },
+      { title: "Liquira - Stablecoin FX Router on Arc Network" },
       {
         name: "description",
         content:

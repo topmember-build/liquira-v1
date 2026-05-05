@@ -115,7 +115,7 @@ function WalletsPage() {
         {!wallet.connected || !wallet.address ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-mono text-[12px] text-muted-foreground">
-              Step 1 — Connect a wallet, then sign a message to verify ownership before linking.
+              Step 1 - Connect a wallet, then sign a message to verify ownership before linking.
             </p>
             <div className="flex gap-2">
               <button
@@ -199,7 +199,7 @@ function WalletsPage() {
                   <td className="px-4 py-3 text-foreground">
                     {w.address.slice(0, 6)}…{w.address.slice(-4)}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{w.label ?? "—"}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{w.label ?? "-"}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {CHAINS.find((c) => c.id === w.chain)?.name ?? w.chain}
                   </td>

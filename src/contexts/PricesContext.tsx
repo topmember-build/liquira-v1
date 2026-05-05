@@ -45,7 +45,7 @@ export function PricesProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "price feed error");
           setFailCount((c) => c + 1);
-          // Don't clear feedRef — keep last known good data
+          // Don't clear feedRef - keep last known good data
         }
       } finally {
         if (!cancelled) setLoading(false);

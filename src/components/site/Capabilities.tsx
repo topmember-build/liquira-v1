@@ -2,7 +2,7 @@ const CAPS = [
   {
     n: "01",
     title: "Depth-aware solver",
-    body: "Routes through direct pairs, USDC bridges, and 3-hop graphs in parallel. Picks the cheapest path before broadcast — never the obvious one.",
+    body: "Routes through direct pairs, USDC bridges, and 3-hop graphs in parallel. Picks the cheapest path before broadcast - never the obvious one.",
     spec: "8 POOLS / QUOTE",
   },
   {

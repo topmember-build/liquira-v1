@@ -1,6 +1,6 @@
 export function formatNumber(value: number, opts: { decimals?: number; compact?: boolean } = {}) {
   const { decimals = 2, compact = false } = opts;
-  if (!Number.isFinite(value)) return "—";
+  if (!Number.isFinite(value)) return "-";
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -9,22 +9,22 @@ export function formatNumber(value: number, opts: { decimals?: number; compact?:
 }
 
 export function formatToken(value: number | null | undefined, symbol: string, decimals = 4) {
-  if (value == null || !Number.isFinite(value)) return `— ${symbol}`;
+  if (value == null || !Number.isFinite(value)) return `- ${symbol}`;
   return `${formatNumber(value, { decimals })} ${symbol}`;
 }
 
 export function formatBps(bps: number | null | undefined) {
-  if (bps == null) return "—";
+  if (bps == null) return "-";
   return `${(bps / 100).toFixed(2)}%`;
 }
 
 export function shortAddr(addr: string | null | undefined, n = 4) {
-  if (!addr) return "—";
+  if (!addr) return "-";
   return `${addr.slice(0, 2 + n)}…${addr.slice(-n)}`;
 }
 
 export function formatRelative(iso: string | null | undefined) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(iso).getTime();
   const diff = Date.now() - d;
   const mins = Math.round(diff / 60000);

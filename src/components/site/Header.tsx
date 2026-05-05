@@ -232,7 +232,7 @@ function WalletButton() {
           <div className="mt-1 break-all font-mono text-[11px] text-foreground">{w.address}</div>
           <div className="mt-2 flex items-center justify-between font-mono text-[11px]">
             <span className="text-muted-foreground">Balance</span>
-            <span className="text-foreground">{w.nativeBalance ?? "—"}</span>
+            <span className="text-foreground">{w.nativeBalance ?? "-"}</span>
           </div>
 
           <div className="mt-3 text-mono-label" style={{ fontSize: 9 }}>

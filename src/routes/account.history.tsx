@@ -155,7 +155,7 @@ function HistoryPage() {
               {upcoming.map((s) => (
                 <tr key={s.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-2.5 text-foreground">
-                    {s.saved_routes?.label ?? "—"}
+                    {s.saved_routes?.label ?? "-"}
                     <span className="ml-2 text-muted-foreground">{s.saved_routes?.from_token} → {s.saved_routes?.to_token}</span>
                   </td>
                   <td className="px-4 py-2.5 text-muted-foreground">{describeSchedule(s)}</td>
@@ -163,7 +163,7 @@ function HistoryPage() {
                     {s.next_run_at ? new Date(s.next_run_at).toLocaleString() : <span className="text-muted-foreground">on condition</span>}
                   </td>
                   <td className="px-4 py-2.5 text-muted-foreground">
-                    {s.last_run_at ? new Date(s.last_run_at).toLocaleString() : "—"}
+                    {s.last_run_at ? new Date(s.last_run_at).toLocaleString() : "-"}
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <button onClick={() => onToggle(s.id, !s.enabled)} className="rounded p-1.5 text-muted-foreground hover:bg-surface-2 hover:text-foreground" title={s.enabled ? "Pause" : "Resume"}>
@@ -223,8 +223,8 @@ function HistoryPage() {
                     <span className="ml-2 text-muted-foreground">{s.from_chain}{s.from_chain !== s.to_chain ? ` → ${s.to_chain}` : ""}</span>
                   </td>
                   <td className="px-4 py-3 text-right text-foreground">{Number(s.amount_in).toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right text-foreground">{s.amount_out ? Number(s.amount_out).toLocaleString(undefined, { maximumFractionDigits: 4 }) : "—"}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{s.rate ? Number(s.rate).toFixed(4) : "—"}</td>
+                  <td className="px-4 py-3 text-right text-foreground">{s.amount_out ? Number(s.amount_out).toLocaleString(undefined, { maximumFractionDigits: 4 }) : "-"}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">{s.rate ? Number(s.rate).toFixed(4) : "-"}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-block border px-2 py-0.5 text-[10px] uppercase tracking-widest ${STATUS_STYLES[s.status] ?? STATUS_STYLES.quoting}`}>
                       {s.status}
@@ -237,7 +237,7 @@ function HistoryPage() {
                       </a>
                     ) : s.tx_hash ? (
                       <span className="text-muted-foreground">{s.tx_hash.slice(0, 6)}…{s.tx_hash.slice(-4)}</span>
-                    ) : (<span className="text-muted-foreground">—</span>)}
+                    ) : (<span className="text-muted-foreground">-</span>)}
                   </td>
                 </tr>
               ))}

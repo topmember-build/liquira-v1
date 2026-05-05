@@ -25,7 +25,7 @@ type Tick = {
 };
 
 function formatPrice(p: number): string {
-  if (!Number.isFinite(p) || p === 0) return "—";
+  if (!Number.isFinite(p) || p === 0) return "-";
   if (p >= 100) return p.toFixed(2);
   if (p >= 1) return p.toFixed(4);
   if (p >= 0.01) return p.toFixed(5);
@@ -100,7 +100,7 @@ export function StatusBar() {
   const { feed, error, failCount } = usePrices();
   const live = !!feed && !error;
   const stale = !!feed && !!error; // have old data but current poll failing
-  const ts = feed ? new Date(feed.fetchedAt).toLocaleTimeString() : "—";
+  const ts = feed ? new Date(feed.fetchedAt).toLocaleTimeString() : "-";
 
   let statusLabel: string;
   let dotClass: string;
@@ -111,7 +111,7 @@ export function StatusBar() {
     statusLabel = `STALE (${failCount} fail${failCount > 1 ? "s" : ""}) · LAST OK ${ts}`;
     dotClass = "animate-pulse-soft bg-warning";
   } else {
-    statusLabel = "FEED OFFLINE — FALLBACK";
+    statusLabel = "FEED OFFLINE - FALLBACK";
     dotClass = "bg-destructive";
   }
 

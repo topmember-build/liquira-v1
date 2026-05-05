@@ -43,8 +43,8 @@ export function Hero() {
 
           <p className="mt-8 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
             Liquira settles cross-currency payments on Arc through depth-aware,
-            multi-stablecoin liquidity. Eleven native stables — USDC, EURC, KRW1,
-            JPYC, NGNX and more — routed at sub-basis-point slippage in{" "}
+            multi-stablecoin liquidity. Eleven native stables - USDC, EURC, KRW1,
+            JPYC, NGNX and more - routed at sub-basis-point slippage in{" "}
             <span className="text-foreground">under 400 ms</span>.
           </p>
 
@@ -70,7 +70,7 @@ export function Hero() {
             </div>
           </div>
 
-          {/* KPI strip — live testnet stats */}
+          {/* KPI strip - live testnet stats */}
           <LiveKpis />
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px] tracking-widest text-muted-foreground/70">
             {["Circle", "BDACS", "JPYC", "STRAITSX", "Bitso", "Transfero", "POUNDTOKEN", "Onyx Naira"].map((i) => (
@@ -213,7 +213,7 @@ function StableGraph() {
               );
             })}
 
-            {/* travelling pulses along a few spokes — animated with SMIL */}
+            {/* travelling pulses along a few spokes - animated with SMIL */}
             {satellites.slice(0, 4).map((s, idx) => (
               <circle key={`pulse-${s.code}`} r="0.7" className="fill-primary">
                 <animate
@@ -247,7 +247,7 @@ function StableGraph() {
             </div>
           </div>
 
-          {/* Satellite tokens — orbit positions update each frame */}
+          {/* Satellite tokens - orbit positions update each frame */}
           {satellites.map((s) => (
             <div
               key={s.code}

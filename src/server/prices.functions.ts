@@ -156,17 +156,17 @@ export const getLivePrices = createServerFn({ method: "GET" }).handler(async () 
     return data;
   }
 
-  // APIs both failed — serve stale cache if within grace period
+  // APIs both failed - serve stale cache if within grace period
   if (cache && now - cache.at < STALE_MAX_MS) {
     console.warn("[prices] APIs failed, serving stale cache from", cache.data.fetchedAt);
     return cache.data;
   }
 
-  // No cache or too old — use static fallback
+  // No cache or too old - use static fallback
   console.warn("[prices] APIs failed, no usable cache, serving static fallback");
   const fb = fallbackPrices();
   const data = buildFeed({}, { USD: 1 });
-  // Don't update cache timestamp — next call should retry APIs
+  // Don't update cache timestamp - next call should retry APIs
   return data;
 });
 
