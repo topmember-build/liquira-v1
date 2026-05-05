@@ -590,7 +590,7 @@ function SwapPanel() {
       <div className="mt-3 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
         <span>
           {isArcTestnet && wallet.connected
-            ? `arc-testnet · bal ${onchainBal !== null ? onchainBal.toLocaleString() : "—"} USDC`
+            ? `arc-testnet · bal ${onchainBal !== null ? onchainBal.toLocaleString() : "-"} USDC`
             : wallet.connected
               ? `wallet · ${wallet.address!.slice(0, 6)}…${wallet.address!.slice(-4)}`
               : "Permit2 enabled · 0 approvals"}
@@ -611,7 +611,7 @@ function SwapPanel() {
               onClick={() => {
                 onchain.usdcBalance().then((b) => {
                   setOnchainBal(b);
-                  toast.success(`Balance refreshed: ${b !== null ? b : "—"} USDC`);
+                  toast.success(`Balance refreshed: ${b !== null ? b : "-"} USDC`);
                 });
               }}
               disabled={!wallet.connected}
@@ -682,13 +682,13 @@ function TransferDetailsDialog({
     {
       label: "Recipient",
       expected: result.expectedRecipient,
-      actual: result.verifiedRecipient ?? "— (no Transfer event)",
+      actual: result.verifiedRecipient ?? "- (no Transfer event)",
       match: result.recipientMatch,
     },
     {
       label: "Amount (USDC)",
       expected: String(result.expectedAmountUsdc),
-      actual: result.verifiedAmountUsdc !== null ? String(result.verifiedAmountUsdc) : "— (no Transfer event)",
+      actual: result.verifiedAmountUsdc !== null ? String(result.verifiedAmountUsdc) : "- (no Transfer event)",
       match: result.amountMatch,
     },
     {
