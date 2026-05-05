@@ -443,70 +443,90 @@ function SwapPanel() {
             )}
           </div>
 
-          {/* Pre-flight gas + treasury (shown before broadcast) */}
-          {onchain.gasEstimate && !onchain.result && (
-            <div className="grid grid-cols-2 gap-3 border-t border-border pt-2 text-muted-foreground">
-              <div className="space-y-1">
-                <div className="text-mono-label" style={{ fontSize: 9 }}>GAS BREAKDOWN</div>
-                <div className="flex justify-between">
-                  <span>Units</span>
-                  <span className="tabular-nums text-foreground">{onchain.gasEstimate.gasUnits.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Gas price</span>
-                  <span className="tabular-nums text-foreground">{Number(onchain.gasEstimate.gasPriceGwei).toFixed(4)} gwei</span>
-                </div>
-                <div className="flex justify-between border-t border-border/50 pt-1">
-                  <span>Total</span>
-                  <span className="tabular-nums text-primary">{onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC</span>
-                </div>
+          {/* Pre-confirmation: what we will verify after the tx lands */}
+          {!onchain.result && (
+            <div className="space-y-2 border-t border-border pt-2">
+              <div className="text-mono-label" style={{ fontSize: 9 }}>
+                WILL VERIFY AFTER CONFIRMATION
               </div>
-              <div>
-                <div className="text-mono-label" style={{ fontSize: 9 }}>TREASURY</div>
-                <div className="text-[10px] tabular-nums text-foreground break-all">
-                  {treasury.slice(0, 10)}…{treasury.slice(-8)}
+              <VerificationGrid
+                rows={[
+                  {
+                    label: "Recipient",
+                    expected: shortAddr(treasury),
+                    verified: null,
+                    state: "pending",
+                    reason: "Decoded from the on-chain Transfer event after receipt.",
+                  },
+                  {
+                    label: "Amount",
+                    expected: `${amount} USDC`,
+                    verified: null,
+                    state: "pending",
+                    reason: "Must equal the exact USDC value emitted by the USDC contract.",
+                  },
+                ]}
+              />
+              {onchain.gasEstimate && (
+                <div className="grid grid-cols-2 gap-3 pt-1 text-muted-foreground">
+                  <div className="space-y-1">
+                    <div className="text-mono-label" style={{ fontSize: 9 }}>GAS BREAKDOWN</div>
+                    <div className="flex justify-between">
+                      <span>Units</span>
+                      <span className="tabular-nums text-foreground">{onchain.gasEstimate.gasUnits.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Gas price</span>
+                      <span className="tabular-nums text-foreground">{Number(onchain.gasEstimate.gasPriceGwei).toFixed(4)} gwei</span>
+                    </div>
+                    <div className="flex justify-between border-t border-border/50 pt-1">
+                      <span>Total</span>
+                      <span className="tabular-nums text-primary">{onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-mono-label" style={{ fontSize: 9 }}>TREASURY</div>
+                    <div className="text-[10px] tabular-nums text-foreground break-all">{shortAddr(treasury)}</div>
+                    <a href="/account/preferences" className="text-[10px] text-primary hover:underline">
+                      Change in settings
+                    </a>
+                  </div>
                 </div>
-                <a href="/account/preferences" className="text-[10px] text-primary hover:underline">
-                  Change in settings →
-                </a>
-              </div>
+              )}
             </div>
           )}
 
-          {/* Result panel */}
+          {/* Post-confirmation result */}
           {onchain.result && (
-            <div className="space-y-1 border-t border-border pt-2 text-muted-foreground">
-              <div>
-                TX:{" "}
-                <a href={onchain.result.explorerUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+            <div className="space-y-2 border-t border-border pt-2">
+              <div className="flex items-center justify-between">
+                <div className="text-mono-label" style={{ fontSize: 9 }}>
+                  VERIFICATION
+                </div>
+                <div className="font-mono text-[10px] uppercase tracking-widest">
+                  {onchain.result.transferVerified && onchain.result.status === "success" ? (
+                    <span className="text-primary">all checks passed</span>
+                  ) : (
+                    <span className="text-destructive">checks failed</span>
+                  )}
+                </div>
+              </div>
+
+              <VerificationGrid rows={buildVerificationRows(onchain.result)} />
+
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-muted-foreground">
+                <span>TX</span>
+                <a
+                  href={onchain.result.explorerUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary hover:underline"
+                >
                   {onchain.result.txHash.slice(0, 14)}…<ExternalLink size={10} className="ml-1 inline" />
                 </a>
-              </div>
-              <div>
-                Gas used: <span className="text-foreground tabular-nums">{onchain.result.gasUsed.toLocaleString()}</span>
-                {" · "}
-                <span className="tabular-nums">{onchain.result.gasCostUsdc.toFixed(6)} USDC</span>
-              </div>
-              <div className="flex items-center gap-1">
-                {onchain.result.recipientMatch ? (
-                  <Check size={11} className="text-primary" />
-                ) : (
-                  <AlertTriangle size={11} className="text-destructive" />
-                )}
-                Recipient match: <span className={onchain.result.recipientMatch ? "text-primary" : "text-destructive"}>
-                  {onchain.result.recipientMatch ? "verified" : "mismatch"}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                {onchain.result.amountMatch ? (
-                  <Check size={11} className="text-primary" />
-                ) : (
-                  <AlertTriangle size={11} className="text-destructive" />
-                )}
-                Amount match: <span className={onchain.result.amountMatch ? "text-primary" : "text-destructive"}>
-                  {onchain.result.verifiedAmountUsdc !== null
-                    ? `${onchain.result.verifiedAmountUsdc} / ${onchain.result.expectedAmountUsdc} USDC`
-                    : "no Transfer event"}
+                <span className="ml-auto">
+                  Gas <span className="text-foreground tabular-nums">{onchain.result.gasUsed.toLocaleString()}</span>{" "}
+                  · <span className="tabular-nums">{onchain.result.gasCostUsdc.toFixed(6)} USDC</span>
                 </span>
               </div>
             </div>
@@ -665,6 +685,104 @@ function SwapPanel() {
   );
 }
 
+type VerificationRow = {
+  label: string;
+  expected: string;
+  verified: string | null;
+  state: "pass" | "fail" | "pending";
+  reason: string;
+};
+
+function shortAddr(a: string): string {
+  if (!a) return "-";
+  if (a.length <= 18) return a;
+  return `${a.slice(0, 10)}…${a.slice(-8)}`;
+}
+
+function buildVerificationRows(
+  result: NonNullable<ReturnType<typeof useOnchainSwap>["result"]>,
+): VerificationRow[] {
+  const noEvent = result.verifiedRecipient === null && result.verifiedAmountUsdc === null;
+  return [
+    {
+      label: "Recipient",
+      expected: result.expectedRecipient,
+      verified: result.verifiedRecipient,
+      state: result.recipientMatch ? "pass" : "fail",
+      reason: result.recipientMatch
+        ? "Transfer event 'to' matches the configured treasury address."
+        : noEvent
+          ? "No USDC Transfer event found in the receipt logs."
+          : "Transfer 'to' did not match the configured treasury address.",
+    },
+    {
+      label: "Amount",
+      expected: `${result.expectedAmountUsdc} USDC`,
+      verified: result.verifiedAmountUsdc !== null ? `${result.verifiedAmountUsdc} USDC` : null,
+      state: result.amountMatch ? "pass" : "fail",
+      reason: result.amountMatch
+        ? "Transfer 'value' (6 decimals) matches the requested USDC amount exactly."
+        : noEvent
+          ? "No USDC Transfer event to read 'value' from."
+          : "Transfer 'value' differs from the requested USDC amount.",
+    },
+    {
+      label: "Tx status",
+      expected: "success",
+      verified: result.status,
+      state: result.status === "success" ? "pass" : "fail",
+      reason:
+        result.status === "success"
+          ? "Receipt status = 1 (success)."
+          : "Receipt status = 0 (reverted on-chain).",
+    },
+  ];
+}
+
+function VerificationGrid({ rows }: { rows: VerificationRow[] }) {
+  return (
+    <div className="space-y-1">
+      <div
+        className="grid grid-cols-[80px,1fr,1fr,auto] gap-2 border-b border-border pb-1 text-mono-label"
+        style={{ fontSize: 9 }}
+      >
+        <span>FIELD</span>
+        <span>EXPECTED</span>
+        <span>VERIFIED</span>
+        <span></span>
+      </div>
+      {rows.map((r) => {
+        const verifiedText =
+          r.state === "pending" ? "awaiting confirmation…" : r.verified ?? "no event";
+        const verifiedClass =
+          r.state === "pass"
+            ? "text-primary"
+            : r.state === "fail"
+              ? "text-destructive"
+              : "text-muted-foreground";
+        const Icon = r.state === "pass" ? Check : r.state === "fail" ? AlertTriangle : Info;
+        const iconClass =
+          r.state === "pass"
+            ? "text-primary"
+            : r.state === "fail"
+              ? "text-destructive"
+              : "text-muted-foreground";
+        return (
+          <div key={r.label} className="space-y-0.5">
+            <div className="grid grid-cols-[80px,1fr,1fr,auto] items-start gap-2">
+              <span className="text-muted-foreground">{r.label}</span>
+              <span className="break-all text-foreground">{r.expected}</span>
+              <span className={`break-all tabular-nums ${verifiedClass}`}>{verifiedText}</span>
+              <Icon size={12} className={`mt-0.5 ${iconClass}`} />
+            </div>
+            <div className="pl-[88px] text-[10px] text-muted-foreground">{r.reason}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function TransferDetailsDialog({
   open,
   onOpenChange,
@@ -678,55 +796,26 @@ function TransferDetailsDialog({
 }) {
   if (!result) return null;
   const verified = result.transferVerified && result.status === "success";
-  const rows: { label: string; expected: string; actual: string; match: boolean }[] = [
-    {
-      label: "Recipient",
-      expected: result.expectedRecipient,
-      actual: result.verifiedRecipient ?? "- (no Transfer event)",
-      match: result.recipientMatch,
-    },
-    {
-      label: "Amount (USDC)",
-      expected: String(result.expectedAmountUsdc),
-      actual: result.verifiedAmountUsdc !== null ? String(result.verifiedAmountUsdc) : "- (no Transfer event)",
-      match: result.amountMatch,
-    },
-    {
-      label: "Tx status",
-      expected: "success",
-      actual: result.status,
-      match: result.status === "success",
-    },
-  ];
+  const rows = buildVerificationRows(result);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-mono text-sm uppercase tracking-widest">
-            {verified ? <Check className="text-primary" size={16} /> : <AlertTriangle className="text-destructive" size={16} />}
-            Transfer details · {verified ? "verified" : "mismatch"}
+            {verified ? (
+              <Check className="text-primary" size={16} />
+            ) : (
+              <AlertTriangle className="text-destructive" size={16} />
+            )}
+            Transfer verification · {verified ? "passed" : "failed"}
           </DialogTitle>
           <DialogDescription className="font-mono text-[11px]">
-            Expected vs actual fields decoded from the Transfer event.
+            Side-by-side comparison of expected vs verified Transfer event fields.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 font-mono text-[11px]">
-          <div className="grid grid-cols-[90px,1fr,1fr,auto] gap-2 border-b border-border pb-2 text-mono-label" style={{ fontSize: 9 }}>
-            <span>FIELD</span><span>EXPECTED</span><span>ACTUAL</span><span></span>
-          </div>
-          {rows.map((r) => (
-            <div key={r.label} className="grid grid-cols-[90px,1fr,1fr,auto] items-start gap-2">
-              <span className="text-muted-foreground">{r.label}</span>
-              <span className="break-all text-foreground">{r.expected}</span>
-              <span className={`break-all ${r.match ? "text-foreground" : "text-destructive"}`}>{r.actual}</span>
-              {r.match ? (
-                <Check size={12} className="mt-0.5 text-primary" />
-              ) : (
-                <AlertTriangle size={12} className="mt-0.5 text-destructive" />
-              )}
-            </div>
-          ))}
+          <VerificationGrid rows={rows} />
 
           <div className="grid grid-cols-2 gap-3 border-t border-border pt-2 text-muted-foreground">
             <div>
@@ -749,7 +838,9 @@ function TransferDetailsDialog({
           </a>
 
           {error && (
-            <div className="border border-destructive/40 bg-destructive/10 p-2 text-destructive">{error}</div>
+            <div className="border border-destructive/40 bg-destructive/10 p-2 text-destructive">
+              {error}
+            </div>
           )}
         </div>
       </DialogContent>
