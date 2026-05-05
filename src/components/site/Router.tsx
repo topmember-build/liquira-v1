@@ -426,7 +426,7 @@ function SwapPanel() {
       </div>
 
       {/* On-chain phase indicator (Arc Testnet) */}
-      {isArcTestnet && (onchain.phase !== "idle" || onchain.gasEstimate) && (
+      {isArcTestnet && wallet.connected && (
         <div className="mt-4 border border-border bg-surface-1 p-3 font-mono text-[11px] space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
