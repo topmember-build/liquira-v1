@@ -108,7 +108,7 @@ export const executeSwap = createServerFn({ method: "POST" })
 
     const swapId = inserted.id;
 
-    // Background driver — uses small timeouts to walk through statuses.
+    // Background driver - uses small timeouts to walk through statuses.
     // We don't await it so the client gets the id fast and tracks via realtime.
     runSwapPipeline(swapId, quote.toChain, data.scheduleId).catch((e) =>
       console.error("[swap-pipeline]", swapId, e),

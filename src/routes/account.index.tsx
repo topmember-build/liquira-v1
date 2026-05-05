@@ -108,7 +108,7 @@ function SavedRoutesPage() {
           walletAddress: wallet.address ?? undefined,
         },
       });
-      toast.success("Swap queued — track live in History", {
+      toast.success("Swap queued - track live in History", {
         action: { label: "Open", onClick: () => (window.location.href = `/account/history#${swapId}`) },
       });
     } catch (e) {
@@ -221,7 +221,7 @@ function SavedRoutesPage() {
           onClose={() => setScheduleFor(null)}
           onCreated={() => {
             setScheduleFor(null);
-            toast.success("Schedule created — see upcoming jobs in History");
+            toast.success("Schedule created - see upcoming jobs in History");
           }}
         />
       )}

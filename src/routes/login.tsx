@@ -15,7 +15,7 @@ export const Route = createFileRoute("/login")({
   },
   head: () => ({
     meta: [
-      { title: "Sign in — Liquira" },
+      { title: "Sign in - Liquira" },
       { name: "description", content: "Sign in to manage saved routes, swap history, and preferences." },
     ],
   }),

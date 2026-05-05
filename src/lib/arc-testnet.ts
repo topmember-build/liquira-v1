@@ -17,7 +17,7 @@ export const arcTestnet = defineChain({
   testnet: true,
 });
 
-// ── Contracts ──────────────────────────────────────────────
+// Contracts
 export const ARC_CONTRACTS = {
   USDC: "0x3600000000000000000000000000000000000000" as const,
   FX_ESCROW: "0x867650F5eAe8df91445971f14d89fd84F0C9a9f8" as const,
@@ -28,11 +28,7 @@ export const ARC_CONTRACTS = {
 // Default destination address for on-chain USDC transfers (overridable in Preferences).
 export const TREASURY_ADDRESS = "0x000000000000000000000000000000000000dEaD" as const;
 
-// Smoke-test mode is fully disabled. Kept as `false` so any remaining gates
-// behave as no-ops without needing to delete every reference at once.
-export const SMOKE_TEST_ONLY = false;
-
-// ── Minimal ERC-20 ABI for transfer ────────────────────────
+// Minimal ERC-20 ABI for transfer + balance
 export const ERC20_TRANSFER_ABI = [
   {
     type: "function" as const,
@@ -57,7 +53,7 @@ export const ERC20_TRANSFER_ABI = [
 export const TRANSFER_EVENT_TOPIC =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
 
-// ── Faucets ────────────────────────────────────────────────
+// Faucets
 export const FAUCETS = [
   {
     label: "Get Testnet USDC (Arc Faucet)",

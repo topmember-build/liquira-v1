@@ -12,8 +12,8 @@ export function Analytics() {
               Numbers <span className="font-serif-italic text-primary">don't lie.</span>
             </h2>
             <p className="mt-4 max-w-xl text-muted-foreground">
-              Real-time view into FX flows on Arc. Filter by token — including
-              NGNX — to drill into TVL, volume, slippage and uptime.
+              Real-time view into FX flows on Arc. Filter by token - including
+              NGNX - to drill into TVL, volume, slippage and uptime.
             </p>
           </div>
         </div>

@@ -23,7 +23,7 @@ const connectors = [
     : []),
 ];
 
-// Arc Testnet only — additional chains will be added in future releases.
+// Arc Testnet only - additional chains will be added in future releases.
 export const wagmiConfig = createConfig({
   chains: [arcTestnet],
   connectors,

@@ -144,7 +144,7 @@ export function StatsPanel({ compact = false, embed = false }: { compact?: boole
               <option value="ALL">All stables</option>
               {STABLES.map((s) => (
                 <option key={s.symbol} value={s.symbol}>
-                  {s.symbol} — {s.name}
+                  {s.symbol} - {s.name}
                 </option>
               ))}
             </select>

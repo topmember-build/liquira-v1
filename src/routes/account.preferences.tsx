@@ -178,7 +178,7 @@ function PreferencesPage() {
                 type="button"
                 onClick={() => {
                   if (!isAddress(treasury)) {
-                    toast.error("Invalid address — must be a 0x-prefixed 40-char hex string");
+                    toast.error("Invalid address - must be a 0x-prefixed 40-char hex string");
                     return;
                   }
                   setTreasuryAddress(treasury);

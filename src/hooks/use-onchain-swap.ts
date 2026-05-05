@@ -1,6 +1,6 @@
 /**
  * Hook for executing on-chain ERC20 transfer swaps on Arc Testnet.
- * Pipeline: estimate gas → simulate → wallet write → wait receipt → verify Transfer event.
+ * Pipeline: estimate gas, simulate, wallet write, wait receipt, verify Transfer event.
  */
 import { useCallback, useState } from "react";
 import {
@@ -9,7 +9,9 @@ import {
   useAccount,
   useChainId,
   useSwitchChain,
+  useConfig,
 } from "wagmi";
+import { getWalletClient } from "@wagmi/core";
 import { parseUnits, formatUnits, formatGwei, decodeEventLog, getAddress } from "viem";
 import {
   ARC_CONTRACTS,
@@ -66,6 +68,7 @@ export function useOnchainSwap() {
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
+  const wagmiConfigRef = useConfig();
 
   /** Estimate gas without sending a transaction. Safe to call repeatedly. */
   const estimateGas = useCallback(
@@ -109,7 +112,7 @@ export function useOnchainSwap() {
       setResult(null);
       setLastAmount(amountUsdc);
 
-      if (!isConnected || !address || !walletClient || !publicClient) {
+      if (!isConnected || !address || !publicClient) {
         setError("Connect your wallet first");
         setPhase("failed");
         return null;
@@ -130,6 +133,22 @@ export function useOnchainSwap() {
           }
         }
 
+        // Resolve wallet client (hook value can lag right after connect/chain switch)
+        let wc: NonNullable<typeof walletClient> | undefined = walletClient ?? undefined;
+        if (!wc) {
+          try {
+            const fetched = await getWalletClient(wagmiConfigRef, { chainId: arcTestnet.id });
+            wc = fetched ?? undefined;
+          } catch {
+            wc = undefined;
+          }
+        }
+        if (!wc) {
+          setError("Wallet client unavailable. Reconnect your wallet and try again.");
+          setPhase("failed");
+          return null;
+        }
+
         // 2. Estimate gas (best-effort; non-fatal)
         setPhase("estimating-gas");
         await estimateGas(amountUsdc);
@@ -148,7 +167,7 @@ export function useOnchainSwap() {
 
         // 4. Write transaction
         setPhase("awaiting-wallet");
-        const hash = await walletClient.writeContract(simulation.request);
+        const hash = await wc.writeContract(simulation.request);
 
         // 5. Wait for receipt
         setPhase("pending");
@@ -157,7 +176,7 @@ export function useOnchainSwap() {
           timeout: 60_000,
         });
 
-        // 6. Verify Transfer event — match recipient AND amount
+        // 6. Verify Transfer event: match recipient AND amount
         setPhase("confirming");
         let verifiedRecipient: string | null = null;
         let verifiedAmountUsdc: number | null = null;
@@ -227,8 +246,8 @@ export function useOnchainSwap() {
         } else if (!transferVerified) {
           setError(
             !recipientMatch
-              ? "Transfer event missing — recipient did not match treasury"
-              : "Transfer amount mismatch — verification failed",
+              ? "Transfer event missing: recipient did not match treasury"
+              : "Transfer amount mismatch: verification failed",
           );
           setPhase("failed");
         } else {
@@ -247,7 +266,7 @@ export function useOnchainSwap() {
         return null;
       }
     },
-    [isConnected, address, walletClient, publicClient, chainId, switchChainAsync, estimateGas],
+    [isConnected, address, walletClient, publicClient, chainId, switchChainAsync, estimateGas, wagmiConfigRef],
   );
 
   const retry = useCallback(async () => {

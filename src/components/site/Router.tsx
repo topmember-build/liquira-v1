@@ -12,7 +12,7 @@ import { simulateSwap, executeSwap } from "@/server/swaps.functions";
 import { useOnchainSwap, type SwapPhase } from "@/hooks/use-onchain-swap";
 import { FAUCETS, arcTestnet } from "@/lib/arc-testnet";
 import { CHAIN_ID_REVERSE } from "@/lib/wagmi";
-import { getTreasuryAddress, isAddress } from "@/lib/treasury";
+import { getTreasuryAddress } from "@/lib/treasury";
 import { readClaims, recordClaim, timeAgo, type FaucetClaim } from "@/lib/faucet-tracker";
 import type { Quote } from "@/lib/quote-engine";
 import { useNavigate } from "@tanstack/react-router";
@@ -29,7 +29,7 @@ export function RouterSection() {
           </h2>
           <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
             Every swap is solved across all live Arc pools. Live FX feed,
-            depth-aware impact, animated route trace — quote, simulate, and
+            depth-aware impact, animated route trace: quote, simulate, and
             execute in one panel.
           </p>
         </div>
@@ -142,15 +142,7 @@ function SwapPanel() {
     const list: { id: string; level: "block" | "warn"; msg: string }[] = [];
     if (!isArcTestnet) return list;
     if (wallet.connected && evmChainId !== arcTestnet.id) {
-      list.push({ id: "chain", level: "block", msg: "Wallet is on the wrong network — switch to Arc Testnet." });
-    }
-    // Treasury address is optional. If invalid, surface as a soft warning only.
-    if (treasury && (!isAddress(treasury) || /^0x0+(dead)?$/i.test(treasury))) {
-      list.push({
-        id: "treasury",
-        level: "warn",
-        msg: "Destination treasury address is invalid — update it in Preferences.",
-      });
+      list.push({ id: "chain", level: "block", msg: "Wallet is on the wrong network. Switch to Arc Testnet." });
     }
     if (amount <= 0) {
       list.push({ id: "amount-zero", level: "block", msg: "Enter an amount greater than zero." });
@@ -161,7 +153,7 @@ function SwapPanel() {
       list.push({ id: "balance", level: "warn", msg: `Amount exceeds your on-chain USDC balance (${onchainBal}).` });
     }
     return list;
-  }, [isArcTestnet, wallet.connected, evmChainId, treasury, amount, onchainBal]);
+  }, [isArcTestnet, wallet.connected, evmChainId, amount, onchainBal]);
 
   const blockingRisk = risks.find((r) => r.level === "block");
 
@@ -215,7 +207,7 @@ function SwapPanel() {
       } else if (res) {
         toast.error("Transaction reverted on-chain");
       }
-      // If null, user rejected or error — onchain.error has details
+      // If null, user rejected or error: onchain.error has details
       if (!res && onchain.error) {
         toast.error(onchain.error);
       }
@@ -237,7 +229,7 @@ function SwapPanel() {
           walletAddress: wallet.address ?? undefined,
         },
       });
-      toast.success("Swap queued — track live in History", {
+      toast.success("Swap queued. Track live in History", {
         action: { label: "Open", onClick: () => navigate({ to: "/account/history" }) },
       });
       void swapId;
@@ -434,7 +426,7 @@ function SwapPanel() {
       </div>
 
       {/* On-chain phase indicator (Arc Testnet) */}
-      {isArcTestnet && (onchain.phase !== "idle" || onchain.gasEstimate) && (
+      {isArcTestnet && wallet.connected && (
         <div className="mt-4 border border-border bg-surface-1 p-3 font-mono text-[11px] space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -598,7 +590,7 @@ function SwapPanel() {
       <div className="mt-3 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
         <span>
           {isArcTestnet && wallet.connected
-            ? `arc-testnet · bal ${onchainBal !== null ? onchainBal.toLocaleString() : "—"} USDC`
+            ? `arc-testnet · bal ${onchainBal !== null ? onchainBal.toLocaleString() : "-"} USDC`
             : wallet.connected
               ? `wallet · ${wallet.address!.slice(0, 6)}…${wallet.address!.slice(-4)}`
               : "Permit2 enabled · 0 approvals"}
@@ -619,7 +611,7 @@ function SwapPanel() {
               onClick={() => {
                 onchain.usdcBalance().then((b) => {
                   setOnchainBal(b);
-                  toast.success(`Balance refreshed: ${b !== null ? b : "—"} USDC`);
+                  toast.success(`Balance refreshed: ${b !== null ? b : "-"} USDC`);
                 });
               }}
               disabled={!wallet.connected}
@@ -690,13 +682,13 @@ function TransferDetailsDialog({
     {
       label: "Recipient",
       expected: result.expectedRecipient,
-      actual: result.verifiedRecipient ?? "— (no Transfer event)",
+      actual: result.verifiedRecipient ?? "- (no Transfer event)",
       match: result.recipientMatch,
     },
     {
       label: "Amount (USDC)",
       expected: String(result.expectedAmountUsdc),
-      actual: result.verifiedAmountUsdc !== null ? String(result.verifiedAmountUsdc) : "— (no Transfer event)",
+      actual: result.verifiedAmountUsdc !== null ? String(result.verifiedAmountUsdc) : "- (no Transfer event)",
       match: result.amountMatch,
     },
     {

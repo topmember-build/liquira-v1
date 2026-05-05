@@ -38,7 +38,7 @@ export function Developers() {
             </h2>
             <p className="mt-5 max-w-md text-muted-foreground">
               Drop the Liquira SDK into any Arc app to settle invoices, payroll,
-              or merchant flow in the customer's local stable — without ever
+              or merchant flow in the customer's local stable - without ever
               touching a CEX.
             </p>
 

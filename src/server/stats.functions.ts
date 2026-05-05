@@ -2,7 +2,7 @@
  * Stable testnet stats. Deterministic per-token time series seeded by symbol
  * so multiple users see the same numbers, plus per-poll jitter for liveness.
  *
- * Exposed via getTestnetStats() — accepts optional `symbol` filter and
+ * Exposed via getTestnetStats() - accepts optional `symbol` filter and
  * returns TVL, 24h volume, avg slippage, uptime, and a 24-point hourly
  * series for each metric.
  */

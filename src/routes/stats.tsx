@@ -7,9 +7,9 @@ import { StatsPanel } from "@/components/site/StatsPanel";
 export const Route = createFileRoute("/stats")({
   head: () => ({
     meta: [
-      { title: "Live testnet stats — Liquira" },
+      { title: "Live testnet stats - Liquira" },
       { name: "description", content: "Real-time TVL, volume, slippage and uptime across all Liquira stable pairs including USDC, EURC, NGNX." },
-      { property: "og:title", content: "Live testnet stats — Liquira" },
+      { property: "og:title", content: "Live testnet stats - Liquira" },
       { property: "og:description", content: "Real-time TVL, volume, slippage and uptime across all Liquira stable pairs." },
     ],
   }),
@@ -31,7 +31,7 @@ function StatsPage() {
             </h1>
             <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
               Real-time TVL, volume, slippage and uptime across every supported
-              stable. Filter by token to drill in — including NGNX (Naira Stable).
+              stable. Filter by token to drill in - including NGNX (Naira Stable).
             </p>
             <div className="mt-10">
               <StatsPanel />

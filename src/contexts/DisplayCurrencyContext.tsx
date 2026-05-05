@@ -66,7 +66,7 @@ export function DisplayCurrencyProvider({ children }: { children: ReactNode }) {
   const formatUsd = (usd: number, opts: { decimals?: number; compact?: boolean } = {}) => {
     const { decimals = 2, compact = false } = opts;
     const value = convertFromUsd(usd, currency);
-    if (!Number.isFinite(value)) return `${SYMBOLS[currency]}—`;
+    if (!Number.isFinite(value)) return `${SYMBOLS[currency]}-`;
     const formatted = new Intl.NumberFormat("en-US", {
       minimumFractionDigits: compact ? 0 : decimals,
       maximumFractionDigits: decimals,
