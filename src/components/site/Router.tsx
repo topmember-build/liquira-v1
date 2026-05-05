@@ -142,15 +142,7 @@ function SwapPanel() {
     const list: { id: string; level: "block" | "warn"; msg: string }[] = [];
     if (!isArcTestnet) return list;
     if (wallet.connected && evmChainId !== arcTestnet.id) {
-      list.push({ id: "chain", level: "block", msg: "Wallet is on the wrong network — switch to Arc Testnet." });
-    }
-    // Treasury address is optional. If invalid, surface as a soft warning only.
-    if (treasury && (!isAddress(treasury) || /^0x0+(dead)?$/i.test(treasury))) {
-      list.push({
-        id: "treasury",
-        level: "warn",
-        msg: "Destination treasury address is invalid — update it in Preferences.",
-      });
+      list.push({ id: "chain", level: "block", msg: "Wallet is on the wrong network. Switch to Arc Testnet." });
     }
     if (amount <= 0) {
       list.push({ id: "amount-zero", level: "block", msg: "Enter an amount greater than zero." });
@@ -161,7 +153,7 @@ function SwapPanel() {
       list.push({ id: "balance", level: "warn", msg: `Amount exceeds your on-chain USDC balance (${onchainBal}).` });
     }
     return list;
-  }, [isArcTestnet, wallet.connected, evmChainId, treasury, amount, onchainBal]);
+  }, [isArcTestnet, wallet.connected, evmChainId, amount, onchainBal]);
 
   const blockingRisk = risks.find((r) => r.level === "block");
 
