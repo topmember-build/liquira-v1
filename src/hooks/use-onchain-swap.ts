@@ -176,7 +176,7 @@ export function useOnchainSwap() {
           timeout: 60_000,
         });
 
-        // 6. Verify Transfer event — match recipient AND amount
+        // 6. Verify Transfer event: match recipient AND amount
         setPhase("confirming");
         let verifiedRecipient: string | null = null;
         let verifiedAmountUsdc: number | null = null;
