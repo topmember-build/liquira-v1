@@ -134,12 +134,13 @@ export function useOnchainSwap() {
         }
 
         // Resolve wallet client (hook value can lag right after connect/chain switch)
-        let wc = walletClient;
+        let wc: NonNullable<typeof walletClient> | undefined = walletClient ?? undefined;
         if (!wc) {
           try {
-            wc = await getWalletClient(wagmiConfigRef, { chainId: arcTestnet.id });
+            const fetched = await getWalletClient(wagmiConfigRef, { chainId: arcTestnet.id });
+            wc = fetched ?? undefined;
           } catch {
-            wc = null;
+            wc = undefined;
           }
         }
         if (!wc) {
