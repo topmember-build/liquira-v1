@@ -246,8 +246,8 @@ export function useOnchainSwap() {
         } else if (!transferVerified) {
           setError(
             !recipientMatch
-              ? "Transfer event missing — recipient did not match treasury"
-              : "Transfer amount mismatch — verification failed",
+              ? "Transfer event missing: recipient did not match treasury"
+              : "Transfer amount mismatch: verification failed",
           );
           setPhase("failed");
         } else {
