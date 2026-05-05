@@ -443,70 +443,90 @@ function SwapPanel() {
             )}
           </div>
 
-          {/* Pre-flight gas + treasury (shown before broadcast) */}
-          {onchain.gasEstimate && !onchain.result && (
-            <div className="grid grid-cols-2 gap-3 border-t border-border pt-2 text-muted-foreground">
-              <div className="space-y-1">
-                <div className="text-mono-label" style={{ fontSize: 9 }}>GAS BREAKDOWN</div>
-                <div className="flex justify-between">
-                  <span>Units</span>
-                  <span className="tabular-nums text-foreground">{onchain.gasEstimate.gasUnits.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Gas price</span>
-                  <span className="tabular-nums text-foreground">{Number(onchain.gasEstimate.gasPriceGwei).toFixed(4)} gwei</span>
-                </div>
-                <div className="flex justify-between border-t border-border/50 pt-1">
-                  <span>Total</span>
-                  <span className="tabular-nums text-primary">{onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC</span>
-                </div>
+          {/* Pre-confirmation: what we will verify after the tx lands */}
+          {!onchain.result && (
+            <div className="space-y-2 border-t border-border pt-2">
+              <div className="text-mono-label" style={{ fontSize: 9 }}>
+                WILL VERIFY AFTER CONFIRMATION
               </div>
-              <div>
-                <div className="text-mono-label" style={{ fontSize: 9 }}>TREASURY</div>
-                <div className="text-[10px] tabular-nums text-foreground break-all">
-                  {treasury.slice(0, 10)}…{treasury.slice(-8)}
+              <VerificationGrid
+                rows={[
+                  {
+                    label: "Recipient",
+                    expected: shortAddr(treasury),
+                    verified: null,
+                    state: "pending",
+                    reason: "Decoded from the on-chain Transfer event after receipt.",
+                  },
+                  {
+                    label: "Amount",
+                    expected: `${amount} USDC`,
+                    verified: null,
+                    state: "pending",
+                    reason: "Must equal the exact USDC value emitted by the USDC contract.",
+                  },
+                ]}
+              />
+              {onchain.gasEstimate && (
+                <div className="grid grid-cols-2 gap-3 pt-1 text-muted-foreground">
+                  <div className="space-y-1">
+                    <div className="text-mono-label" style={{ fontSize: 9 }}>GAS BREAKDOWN</div>
+                    <div className="flex justify-between">
+                      <span>Units</span>
+                      <span className="tabular-nums text-foreground">{onchain.gasEstimate.gasUnits.toLocaleString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Gas price</span>
+                      <span className="tabular-nums text-foreground">{Number(onchain.gasEstimate.gasPriceGwei).toFixed(4)} gwei</span>
+                    </div>
+                    <div className="flex justify-between border-t border-border/50 pt-1">
+                      <span>Total</span>
+                      <span className="tabular-nums text-primary">{onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-mono-label" style={{ fontSize: 9 }}>TREASURY</div>
+                    <div className="text-[10px] tabular-nums text-foreground break-all">{shortAddr(treasury)}</div>
+                    <a href="/account/preferences" className="text-[10px] text-primary hover:underline">
+                      Change in settings
+                    </a>
+                  </div>
                 </div>
-                <a href="/account/preferences" className="text-[10px] text-primary hover:underline">
-                  Change in settings →
-                </a>
-              </div>
+              )}
             </div>
           )}
 
-          {/* Result panel */}
+          {/* Post-confirmation result */}
           {onchain.result && (
-            <div className="space-y-1 border-t border-border pt-2 text-muted-foreground">
-              <div>
-                TX:{" "}
-                <a href={onchain.result.explorerUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+            <div className="space-y-2 border-t border-border pt-2">
+              <div className="flex items-center justify-between">
+                <div className="text-mono-label" style={{ fontSize: 9 }}>
+                  VERIFICATION
+                </div>
+                <div className="font-mono text-[10px] uppercase tracking-widest">
+                  {onchain.result.transferVerified && onchain.result.status === "success" ? (
+                    <span className="text-primary">all checks passed</span>
+                  ) : (
+                    <span className="text-destructive">checks failed</span>
+                  )}
+                </div>
+              </div>
+
+              <VerificationGrid rows={buildVerificationRows(onchain.result)} />
+
+              <div className="flex flex-wrap items-center gap-2 pt-1 text-muted-foreground">
+                <span>TX</span>
+                <a
+                  href={onchain.result.explorerUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary hover:underline"
+                >
                   {onchain.result.txHash.slice(0, 14)}…<ExternalLink size={10} className="ml-1 inline" />
                 </a>
-              </div>
-              <div>
-                Gas used: <span className="text-foreground tabular-nums">{onchain.result.gasUsed.toLocaleString()}</span>
-                {" · "}
-                <span className="tabular-nums">{onchain.result.gasCostUsdc.toFixed(6)} USDC</span>
-              </div>
-              <div className="flex items-center gap-1">
-                {onchain.result.recipientMatch ? (
-                  <Check size={11} className="text-primary" />
-                ) : (
-                  <AlertTriangle size={11} className="text-destructive" />
-                )}
-                Recipient match: <span className={onchain.result.recipientMatch ? "text-primary" : "text-destructive"}>
-                  {onchain.result.recipientMatch ? "verified" : "mismatch"}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                {onchain.result.amountMatch ? (
-                  <Check size={11} className="text-primary" />
-                ) : (
-                  <AlertTriangle size={11} className="text-destructive" />
-                )}
-                Amount match: <span className={onchain.result.amountMatch ? "text-primary" : "text-destructive"}>
-                  {onchain.result.verifiedAmountUsdc !== null
-                    ? `${onchain.result.verifiedAmountUsdc} / ${onchain.result.expectedAmountUsdc} USDC`
-                    : "no Transfer event"}
+                <span className="ml-auto">
+                  Gas <span className="text-foreground tabular-nums">{onchain.result.gasUsed.toLocaleString()}</span>{" "}
+                  · <span className="tabular-nums">{onchain.result.gasCostUsdc.toFixed(6)} USDC</span>
                 </span>
               </div>
             </div>
