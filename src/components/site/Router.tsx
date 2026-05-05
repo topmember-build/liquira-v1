@@ -685,6 +685,104 @@ function SwapPanel() {
   );
 }
 
+type VerificationRow = {
+  label: string;
+  expected: string;
+  verified: string | null;
+  state: "pass" | "fail" | "pending";
+  reason: string;
+};
+
+function shortAddr(a: string): string {
+  if (!a) return "-";
+  if (a.length <= 18) return a;
+  return `${a.slice(0, 10)}…${a.slice(-8)}`;
+}
+
+function buildVerificationRows(
+  result: NonNullable<ReturnType<typeof useOnchainSwap>["result"]>,
+): VerificationRow[] {
+  const noEvent = result.verifiedRecipient === null && result.verifiedAmountUsdc === null;
+  return [
+    {
+      label: "Recipient",
+      expected: result.expectedRecipient,
+      verified: result.verifiedRecipient,
+      state: result.recipientMatch ? "pass" : "fail",
+      reason: result.recipientMatch
+        ? "Transfer event 'to' matches the configured treasury address."
+        : noEvent
+          ? "No USDC Transfer event found in the receipt logs."
+          : "Transfer 'to' did not match the configured treasury address.",
+    },
+    {
+      label: "Amount",
+      expected: `${result.expectedAmountUsdc} USDC`,
+      verified: result.verifiedAmountUsdc !== null ? `${result.verifiedAmountUsdc} USDC` : null,
+      state: result.amountMatch ? "pass" : "fail",
+      reason: result.amountMatch
+        ? "Transfer 'value' (6 decimals) matches the requested USDC amount exactly."
+        : noEvent
+          ? "No USDC Transfer event to read 'value' from."
+          : "Transfer 'value' differs from the requested USDC amount.",
+    },
+    {
+      label: "Tx status",
+      expected: "success",
+      verified: result.status,
+      state: result.status === "success" ? "pass" : "fail",
+      reason:
+        result.status === "success"
+          ? "Receipt status = 1 (success)."
+          : "Receipt status = 0 (reverted on-chain).",
+    },
+  ];
+}
+
+function VerificationGrid({ rows }: { rows: VerificationRow[] }) {
+  return (
+    <div className="space-y-1">
+      <div
+        className="grid grid-cols-[80px,1fr,1fr,auto] gap-2 border-b border-border pb-1 text-mono-label"
+        style={{ fontSize: 9 }}
+      >
+        <span>FIELD</span>
+        <span>EXPECTED</span>
+        <span>VERIFIED</span>
+        <span></span>
+      </div>
+      {rows.map((r) => {
+        const verifiedText =
+          r.state === "pending" ? "awaiting confirmation…" : r.verified ?? "no event";
+        const verifiedClass =
+          r.state === "pass"
+            ? "text-primary"
+            : r.state === "fail"
+              ? "text-destructive"
+              : "text-muted-foreground";
+        const Icon = r.state === "pass" ? Check : r.state === "fail" ? AlertTriangle : Info;
+        const iconClass =
+          r.state === "pass"
+            ? "text-primary"
+            : r.state === "fail"
+              ? "text-destructive"
+              : "text-muted-foreground";
+        return (
+          <div key={r.label} className="space-y-0.5">
+            <div className="grid grid-cols-[80px,1fr,1fr,auto] items-start gap-2">
+              <span className="text-muted-foreground">{r.label}</span>
+              <span className="break-all text-foreground">{r.expected}</span>
+              <span className={`break-all tabular-nums ${verifiedClass}`}>{verifiedText}</span>
+              <Icon size={12} className={`mt-0.5 ${iconClass}`} />
+            </div>
+            <div className="pl-[88px] text-[10px] text-muted-foreground">{r.reason}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function TransferDetailsDialog({
   open,
   onOpenChange,
@@ -698,55 +796,26 @@ function TransferDetailsDialog({
 }) {
   if (!result) return null;
   const verified = result.transferVerified && result.status === "success";
-  const rows: { label: string; expected: string; actual: string; match: boolean }[] = [
-    {
-      label: "Recipient",
-      expected: result.expectedRecipient,
-      actual: result.verifiedRecipient ?? "- (no Transfer event)",
-      match: result.recipientMatch,
-    },
-    {
-      label: "Amount (USDC)",
-      expected: String(result.expectedAmountUsdc),
-      actual: result.verifiedAmountUsdc !== null ? String(result.verifiedAmountUsdc) : "- (no Transfer event)",
-      match: result.amountMatch,
-    },
-    {
-      label: "Tx status",
-      expected: "success",
-      actual: result.status,
-      match: result.status === "success",
-    },
-  ];
+  const rows = buildVerificationRows(result);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-mono text-sm uppercase tracking-widest">
-            {verified ? <Check className="text-primary" size={16} /> : <AlertTriangle className="text-destructive" size={16} />}
-            Transfer details · {verified ? "verified" : "mismatch"}
+            {verified ? (
+              <Check className="text-primary" size={16} />
+            ) : (
+              <AlertTriangle className="text-destructive" size={16} />
+            )}
+            Transfer verification · {verified ? "passed" : "failed"}
           </DialogTitle>
           <DialogDescription className="font-mono text-[11px]">
-            Expected vs actual fields decoded from the Transfer event.
+            Side-by-side comparison of expected vs verified Transfer event fields.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 font-mono text-[11px]">
-          <div className="grid grid-cols-[90px,1fr,1fr,auto] gap-2 border-b border-border pb-2 text-mono-label" style={{ fontSize: 9 }}>
-            <span>FIELD</span><span>EXPECTED</span><span>ACTUAL</span><span></span>
-          </div>
-          {rows.map((r) => (
-            <div key={r.label} className="grid grid-cols-[90px,1fr,1fr,auto] items-start gap-2">
-              <span className="text-muted-foreground">{r.label}</span>
-              <span className="break-all text-foreground">{r.expected}</span>
-              <span className={`break-all ${r.match ? "text-foreground" : "text-destructive"}`}>{r.actual}</span>
-              {r.match ? (
-                <Check size={12} className="mt-0.5 text-primary" />
-              ) : (
-                <AlertTriangle size={12} className="mt-0.5 text-destructive" />
-              )}
-            </div>
-          ))}
+          <VerificationGrid rows={rows} />
 
           <div className="grid grid-cols-2 gap-3 border-t border-border pt-2 text-muted-foreground">
             <div>
@@ -769,7 +838,9 @@ function TransferDetailsDialog({
           </a>
 
           {error && (
-            <div className="border border-destructive/40 bg-destructive/10 p-2 text-destructive">{error}</div>
+            <div className="border border-destructive/40 bg-destructive/10 p-2 text-destructive">
+              {error}
+            </div>
           )}
         </div>
       </DialogContent>
