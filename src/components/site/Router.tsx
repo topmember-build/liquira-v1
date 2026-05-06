@@ -1,22 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Send, ArrowDownUp, Settings, ExternalLink, Droplets, RotateCcw, Check, AlertTriangle, Info } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Loader2, Send, ArrowDownUp, Settings, Check, AlertTriangle, Info } from "lucide-react";
 import { SectionHeader } from "./Capabilities";
 import { STABLES } from "@/lib/stables";
-import { usePrices } from "@/contexts/PricesContext";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWallet } from "@/contexts/WalletContext";
-import { simulateSwap, executeSwap } from "@/server/swaps.functions";
-import { useOnchainSwap, type SwapPhase } from "@/hooks/use-onchain-swap";
-import { FAUCETS, arcTestnet } from "@/lib/arc-testnet";
-import { CHAIN_ID_REVERSE } from "@/lib/wagmi";
-
-import { readClaims, recordClaim, timeAgo, type FaucetClaim } from "@/lib/faucet-tracker";
-import type { Quote } from "@/lib/quote-engine";
+import { fxService, type FxQuote, type TxStatus } from "@/lib/fx-service";
 import { useNavigate } from "@tanstack/react-router";
-import { useChainId } from "wagmi";
 
 export function RouterSection() {
   return (
