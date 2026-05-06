@@ -19,7 +19,7 @@ import {
   TRANSFER_EVENT_TOPIC,
   arcTestnet,
 } from "@/lib/arc-testnet";
-import { getTreasuryAddress } from "@/lib/treasury";
+
 
 export type SwapPhase =
   | "idle"
@@ -77,14 +77,14 @@ export function useOnchainSwap() {
       if (chainId !== arcTestnet.id) return null;
       try {
         const amount = parseUnits(String(amountUsdc), 6);
-        const treasury = getTreasuryAddress();
+        const recipient = address;
         const [gasUnits, gasPriceWei] = await Promise.all([
           publicClient.estimateContractGas({
             address: ARC_CONTRACTS.USDC,
             abi: ERC20_TRANSFER_ABI,
             functionName: "transfer",
             account: address,
-            args: [treasury, amount],
+            args: [recipient, amount],
           }),
           publicClient.getGasPrice(),
         ]);
@@ -118,7 +118,7 @@ export function useOnchainSwap() {
         return null;
       }
 
-      const treasury = getTreasuryAddress();
+      const recipient = address;
 
       try {
         // 1. Ensure wallet is on Arc Testnet (always verify, not just hook state)
@@ -168,7 +168,7 @@ export function useOnchainSwap() {
           abi: ERC20_TRANSFER_ABI,
           functionName: "transfer",
           account: address,
-          args: [treasury, amount],
+          args: [recipient, amount],
         });
 
         // 4. Write transaction
@@ -211,7 +211,7 @@ export function useOnchainSwap() {
             });
             const to = decoded.args.to as string;
             const value = decoded.args.value as bigint;
-            if (to.toLowerCase() === treasury.toLowerCase()) {
+            if (to.toLowerCase() === recipient.toLowerCase()) {
               verifiedRecipient = getAddress(to);
               verifiedAmountUsdc = Number(formatUnits(value, 6));
               recipientMatch = true;
@@ -238,7 +238,7 @@ export function useOnchainSwap() {
           transferVerified,
           verifiedRecipient,
           verifiedAmountUsdc,
-          expectedRecipient: treasury,
+          expectedRecipient: recipient,
           expectedAmountUsdc: amountUsdc,
           recipientMatch,
           amountMatch,
@@ -252,7 +252,7 @@ export function useOnchainSwap() {
         } else if (!transferVerified) {
           setError(
             !recipientMatch
-              ? "Transfer event missing: recipient did not match treasury"
+              ? "Transfer event missing: recipient did not match"
               : "Transfer amount mismatch: verification failed",
           );
           setPhase("failed");
