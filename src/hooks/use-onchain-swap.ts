@@ -121,39 +121,36 @@ export function useOnchainSwap() {
       const treasury = getTreasuryAddress();
 
       try {
-        // 1. Ensure we're on Arc Testnet
-        if (chainId !== arcTestnet.id) {
-          setPhase("switching-chain");
-          try {
-            await switchChainAsync({ chainId: arcTestnet.id });
-          } catch {
-            setError("Please switch to Arc Testnet in your wallet");
-            setPhase("failed");
-            return null;
-          }
+        // 1. Ensure wallet is on Arc Testnet (always verify, not just hook state)
+        setPhase("switching-chain");
+        try {
+          await switchChainAsync({ chainId: arcTestnet.id });
+        } catch {
+          setError(
+            `Switch your wallet to Arc Testnet (chain id ${arcTestnet.id}). Currently on chain id ${chainId}.`,
+          );
+          setPhase("failed");
+          return null;
         }
 
-        // Resolve wallet client (hook value can lag right after connect/chain switch)
-        let wc: NonNullable<typeof walletClient> | undefined = walletClient ?? undefined;
-        for (let i = 0; i < 5 && !wc; i++) {
+        // Resolve wallet client and confirm it actually reports Arc Testnet
+        let wc: NonNullable<typeof walletClient> | undefined;
+        for (let i = 0; i < 8; i++) {
           try {
             const fetched = await getWalletClient(wagmiConfigRef, { chainId: arcTestnet.id });
-            wc = fetched ?? undefined;
+            if (fetched && (fetched.chain as { id?: number } | undefined)?.id === arcTestnet.id) {
+              wc = fetched;
+              break;
+            }
           } catch {
-            wc = undefined;
+            // keep polling
           }
-          if (!wc) await new Promise((r) => setTimeout(r, 300));
+          await new Promise((r) => setTimeout(r, 350));
         }
         if (!wc) {
-          try {
-            const fetched = await getWalletClient(wagmiConfigRef);
-            wc = fetched ?? undefined;
-          } catch {
-            wc = undefined;
-          }
-        }
-        if (!wc) {
-          setError("Wallet client unavailable. Reconnect your wallet and try again.");
+          setError(
+            `Wallet is not on Arc Testnet yet. Approve the network switch in your wallet (target chain id ${arcTestnet.id}) and try again.`,
+          );
           setPhase("failed");
           return null;
         }
