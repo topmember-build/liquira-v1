@@ -138,7 +138,7 @@ export function useOnchainSwap() {
         for (let i = 0; i < 8; i++) {
           try {
             const fetched = await getWalletClient(wagmiConfigRef, { chainId: arcTestnet.id });
-            if (fetched && fetched.chain?.id === arcTestnet.id) {
+            if (fetched && (fetched.chain as { id?: number } | undefined)?.id === arcTestnet.id) {
               wc = fetched;
               break;
             }
