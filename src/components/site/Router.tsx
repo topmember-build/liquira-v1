@@ -1,22 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Send, ArrowDownUp, Settings, ExternalLink, Droplets, RotateCcw, Check, AlertTriangle, Info } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Loader2, Send, ArrowDownUp, Settings, Check, AlertTriangle, Info } from "lucide-react";
 import { SectionHeader } from "./Capabilities";
 import { STABLES } from "@/lib/stables";
-import { usePrices } from "@/contexts/PricesContext";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWallet } from "@/contexts/WalletContext";
-import { simulateSwap, executeSwap } from "@/server/swaps.functions";
-import { useOnchainSwap, type SwapPhase } from "@/hooks/use-onchain-swap";
-import { FAUCETS, arcTestnet } from "@/lib/arc-testnet";
-import { CHAIN_ID_REVERSE } from "@/lib/wagmi";
-
-import { readClaims, recordClaim, timeAgo, type FaucetClaim } from "@/lib/faucet-tracker";
-import type { Quote } from "@/lib/quote-engine";
+import { fxService, type FxQuote, type TxStatus } from "@/lib/fx-service";
 import { useNavigate } from "@tanstack/react-router";
-import { useChainId } from "wagmi";
 
 export function RouterSection() {
   return (
@@ -48,129 +38,105 @@ export function RouterSection() {
 
 type RouteMode = "best" | "direct" | "multihop";
 
+const STATUS_LABEL: Record<TxStatus | "idle", string> = {
+  idle: "Ready",
+  pending: "Routing payment…",
+  success: "Settled ✓",
+  failed: "Failed",
+};
+
 function SwapPanel() {
   const { user } = useAuth();
-  const wallet = useWallet();
-  const { crossRate, feed } = usePrices();
   const { formatUsd } = useDisplayCurrency();
   const navigate = useNavigate();
-  const evmChainId = useChainId();
-  const onchain = useOnchainSwap();
 
-  const [fromToken, setFromToken] = useState("USDC");
-  const [toToken, setToToken] = useState("EURC");
+  const [fromCurrency, setFromCurrency] = useState("USDC");
+  const [toCurrency, setToCurrency] = useState("EURC");
   const [amountStr, setAmountStr] = useState("10000");
   const [slippagePct, setSlippagePct] = useState(0.3);
   const [routeMode, setRouteMode] = useState<RouteMode>("best");
-  const [simulating, setSimulating] = useState(false);
+
+  const [quote, setQuote] = useState<FxQuote | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [quoting, setQuoting] = useState(false);
   const [executing, setExecuting] = useState(false);
-  const [quote, setQuote] = useState<Quote | null>(null);
   const [pulseKey, setPulseKey] = useState(0);
-  const [onchainBal, setOnchainBal] = useState<number | null>(null);
-  
-  const [claims, setClaims] = useState<FaucetClaim[]>(() => readClaims());
-  const [detailsOpen, setDetailsOpen] = useState(false);
+
+  const [transactionId, setTransactionId] = useState<string | null>(null);
+  const [txStatus, setTxStatus] = useState<TxStatus | "idle">("idle");
+  const [txDetails, setTxDetails] = useState<Record<string, unknown> | null>(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const amount = Number(amountStr) || 0;
-  const liveRate = crossRate(fromToken, toToken) || 0;
-  const estOut = amount * liveRate;
 
-  // Detect if wallet is on Arc Testnet
-  const isArcTestnet = CHAIN_ID_REVERSE[evmChainId] === "arc-testnet";
-
-  // Fetch on-chain USDC balance + estimate gas when on Arc
+  // Debounced quote preview from backend.
   useEffect(() => {
-    if (isArcTestnet && wallet.connected) {
-      onchain.usdcBalance().then((b) => setOnchainBal(b));
-    }
-  }, [isArcTestnet, wallet.connected, wallet.address, onchain.usdcBalance]);
-
-
-  // Live gas estimate (debounced) when on Arc with valid amount
-  useEffect(() => {
-    if (!isArcTestnet || !wallet.connected || !amount || amount <= 0) return;
-    const id = setTimeout(() => {
-      void onchain.estimateGas(amount);
-    }, 600);
-    return () => clearTimeout(id);
-  }, [isArcTestnet, wallet.connected, amount, onchain.estimateGas]);
-
-  // Auto-simulate (debounced)
-  useEffect(() => {
-    if (!amount || amount <= 0 || !feed) {
+    if (!amount || amount <= 0) {
       setQuote(null);
+      setQuoteError(null);
       return;
     }
+    let cancelled = false;
     const id = setTimeout(async () => {
-      setSimulating(true);
+      setQuoting(true);
+      setQuoteError(null);
       try {
-        const { quote: q } = await simulateSwap({
-          data: {
-            fromToken,
-            toToken,
-            fromChain: "arc-testnet",
-            toChain: "arc-testnet",
-            amount,
-            slippageBps: Math.round(slippagePct * 100),
-          },
-        });
+        const q = await fxService.getQuote(fromCurrency, toCurrency, amount);
+        if (cancelled) return;
         setQuote(q);
         setPulseKey((k) => k + 1);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "";
-        if (!msg.includes("Auth")) console.warn("simulate failed", e);
+        if (cancelled) return;
+        setQuote(null);
+        setQuoteError(e instanceof Error ? e.message : "Quote failed");
       } finally {
-        setSimulating(false);
+        if (!cancelled) setQuoting(false);
       }
-    }, 400);
-    return () => clearTimeout(id);
-  }, [fromToken, toToken, amount, slippagePct, routeMode, feed, isArcTestnet]);
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [fromCurrency, toCurrency, amount]);
+
+  // Poll transaction status until terminal.
+  useEffect(() => {
+    if (!transactionId || txStatus !== "pending") return;
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await fxService.getTransactionStatus(transactionId);
+        setTxStatus(res.status);
+        setTxDetails(res.details);
+        if (res.status !== "pending" && pollRef.current) {
+          clearInterval(pollRef.current);
+          pollRef.current = null;
+          if (res.status === "success") {
+            toast.success("Payment settled", {
+              description: `Tx ${transactionId.slice(0, 8)}…`,
+            });
+          } else {
+            toast.error("Payment failed");
+          }
+        }
+      } catch {
+        /* keep polling on transient errors */
+      }
+    }, 1200);
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      pollRef.current = null;
+    };
+  }, [transactionId, txStatus]);
 
   const flip = () => {
-    setFromToken(toToken);
-    setToToken(fromToken);
+    setFromCurrency(toCurrency);
+    setToCurrency(fromCurrency);
     setQuote(null);
   };
 
-  // ── Pre-swap risk checks (Arc on-chain mode) ──────────────────
-  const MIN_AMOUNT_USDC = 0.000001; // 1 unit at 6 decimals
-  const risks = useMemo(() => {
-    const list: { id: string; level: "block" | "warn"; msg: string }[] = [];
-    if (!isArcTestnet) return list;
-    if (wallet.connected && evmChainId !== arcTestnet.id) {
-      list.push({ id: "chain", level: "block", msg: "Wallet is on the wrong network. Switch to Arc Testnet." });
-    }
-    if (amount <= 0) {
-      list.push({ id: "amount-zero", level: "block", msg: "Enter an amount greater than zero." });
-    } else if (amount < MIN_AMOUNT_USDC) {
-      list.push({ id: "amount-min", level: "block", msg: `Amount is below the minimum (${MIN_AMOUNT_USDC} USDC).` });
-    }
-    if (onchainBal !== null && amount > onchainBal) {
-      list.push({ id: "balance", level: "warn", msg: `Amount exceeds your on-chain USDC balance (${onchainBal}).` });
-    }
-    return list;
-  }, [isArcTestnet, wallet.connected, evmChainId, amount, onchainBal]);
-
-  const blockingRisk = risks.find((r) => r.level === "block");
-
-  // Auto-refresh balance after a failure or successful retry
-  useEffect(() => {
-    if (!isArcTestnet || !wallet.connected) return;
-    if (onchain.phase === "failed" || onchain.phase === "confirmed") {
-      void onchain.usdcBalance().then((b) => setOnchainBal(b));
-    }
-  }, [onchain.phase, isArcTestnet, wallet.connected, onchain.usdcBalance]);
-
-  // Auto-open post-execution details modal once a result is available
-  useEffect(() => {
-    if (onchain.result && (onchain.phase === "confirmed" || onchain.phase === "failed")) {
-      setDetailsOpen(true);
-    }
-  }, [onchain.result, onchain.phase]);
-
   const handleExecute = async () => {
     if (!user) {
-      toast.error("Sign in to execute swaps", {
+      toast.error("Sign in to execute trades", {
         action: { label: "Sign in", onClick: () => navigate({ to: "/login", search: { redirect: "/" } }) },
       });
       return;
@@ -179,73 +145,34 @@ function SwapPanel() {
       toast.error("Enter an amount");
       return;
     }
-    if (isArcTestnet && blockingRisk) {
-      toast.error(blockingRisk.msg);
-      return;
-    }
-
-    // On Arc Testnet with wallet connected → real on-chain ERC20 transfer
-    if (isArcTestnet && wallet.connected) {
-      setExecuting(true);
-      onchain.reset();
-      const res = await onchain.execute(amount);
-      setExecuting(false);
-      if (res?.status === "success") {
-        toast.success("On-chain transfer confirmed!", {
-          description: `TX: ${res.txHash.slice(0, 10)}…`,
-          action: {
-            label: "View on ArcScan",
-            onClick: () => window.open(res.explorerUrl, "_blank"),
-          },
-        });
-        // Refresh balance
-        onchain.usdcBalance().then((b) => setOnchainBal(b));
-      } else if (res) {
-        toast.error("Transaction reverted on-chain");
-      }
-      // If null, user rejected or error: onchain.error has details
-      if (!res && onchain.error) {
-        toast.error(onchain.error);
-      }
-      return;
-    }
-
-    // Fallback: server-side mock pipeline
     setExecuting(true);
+    setTxStatus("idle");
+    setTxDetails(null);
+    setTransactionId(null);
     try {
-      const { swapId } = await executeSwap({
-        data: {
-          fromToken,
-          toToken,
-          fromChain: "arc-testnet",
-          toChain: "arc-testnet",
-          amount,
-          slippageBps: Math.round(slippagePct * 100),
-          source: "web",
-          walletAddress: wallet.address ?? undefined,
-        },
+      const res = await fxService.executeTrade({
+        fromCurrency,
+        toCurrency,
+        amount,
+        userId: user.id,
       });
-      toast.success("Swap queued. Track live in History", {
-        action: { label: "Open", onClick: () => navigate({ to: "/account/history" }) },
+      setTransactionId(res.transactionId);
+      setTxStatus(res.status);
+      toast.success("Trade submitted", {
+        description: `Tx ${res.transactionId.slice(0, 8)}…`,
       });
-      void swapId;
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Swap failed");
+      toast.error(e instanceof Error ? e.message : "Execute failed");
     } finally {
       setExecuting(false);
     }
   };
 
   const slippageBps = Math.round(slippagePct * 100);
-  const minReceived = quote?.minReceived ?? estOut * (1 - slippageBps / 10_000);
-  const priceImpactBps = quote?.priceImpactBps ?? 0;
-  const impactColor = priceImpactBps > 100 ? "text-yellow-400" : priceImpactBps > 30 ? "text-foreground" : "text-primary";
-
-  // Animated impact bar width (0..100%)
-  const impactWidth = useMemo(() => {
-    if (!quote) return 0;
-    return Math.min(100, (quote.priceImpactBps / 200) * 100);
-  }, [quote]);
+  const rate = quote?.rate ?? 0;
+  const fee = quote?.fee ?? 0;
+  const estOut = quote?.estimatedAmount ?? 0;
+  const minReceived = estOut * (1 - slippageBps / 10_000);
 
   return (
     <div className="border border-border bg-background p-6">
@@ -253,7 +180,7 @@ function SwapPanel() {
         <div className="flex items-center gap-2 tracking-widest text-muted-foreground">
           <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-primary" />
           <span className="text-foreground">SWAP</span>
-          <span>· LIVE FEED</span>
+          <span>· INTENT-BASED</span>
         </div>
         <div className="flex items-center gap-1 border border-border">
           {(["best", "direct", "multihop"] as RouteMode[]).map((m) => (
@@ -274,7 +201,7 @@ function SwapPanel() {
       <div className="mt-5 border border-border bg-surface-1 p-4">
         <div className="flex items-center justify-between text-mono-label">
           <span>YOU PAY</span>
-          <span>≈ {formatUsd(amount * (feed?.prices[fromToken] ?? 1), { decimals: 2 })}</span>
+          <span>{fromCurrency}</span>
         </div>
         <div className="mt-2 flex items-center justify-between gap-3">
           <input
@@ -283,10 +210,10 @@ function SwapPanel() {
             inputMode="decimal"
             className="w-full bg-transparent font-mono text-3xl text-foreground outline-none tabular-nums"
           />
-          <TokenSelect value={fromToken} onChange={(v) => setFromToken(v)} />
+          <CurrencySelect value={fromCurrency} onChange={setFromCurrency} />
         </div>
         <div className="mt-2 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-          <span>1 {fromToken} = {(feed?.prices[fromToken] ?? 0).toFixed(6)} USD</span>
+          <span>1 {fromCurrency} = {rate ? rate.toFixed(6) : "—"} {toCurrency}</span>
           <div className="flex gap-2">
             {[
               ["25%", 0.25],
@@ -320,20 +247,20 @@ function SwapPanel() {
         </div>
         <div className="mt-2 flex items-center justify-between gap-3">
           <div key={pulseKey} className="font-mono text-3xl text-foreground tabular-nums animate-quote-in">
-            {(quote?.amountOut ?? estOut).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+            {estOut.toLocaleString(undefined, { maximumFractionDigits: 4 })}
           </div>
-          <TokenSelect value={toToken} onChange={(v) => setToToken(v)} />
+          <CurrencySelect value={toCurrency} onChange={setToCurrency} />
         </div>
         <div className="mt-2 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-          <span>≈ {formatUsd((quote?.amountOut ?? estOut) * (feed?.prices[toToken] ?? 1), { decimals: 2 })}</span>
+          <span>≈ {formatUsd(estOut, { decimals: 2 })}</span>
           <span className="flex items-center gap-1.5 text-primary">
             <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-primary" />
-            {simulating ? "simulating…" : "live oracle"}
+            {quoting ? "quoting…" : quoteError ? "quote unavailable" : "live quote"}
           </span>
         </div>
       </div>
 
-      {/* Slippage slider */}
+      {/* Slippage */}
       <div className="mt-4 border border-border bg-surface-1 p-4">
         <div className="flex items-center justify-between text-mono-label">
           <span className="flex items-center gap-1">
@@ -355,489 +282,99 @@ function SwapPanel() {
         </div>
       </div>
 
-      {/* Route impact details panel */}
+      {/* Quote preview */}
       <div className="mt-4 border border-border bg-surface-1 p-4 space-y-3">
         <div className="flex items-center justify-between text-mono-label">
-          <span>ROUTE IMPACT PREVIEW</span>
-          <span className={impactColor}>{(priceImpactBps / 100).toFixed(3)}%</span>
+          <span>QUOTE PREVIEW</span>
+          <span className="text-primary">{quoting ? "refreshing…" : "from /fx/quote"}</span>
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-          <div
-            key={pulseKey}
-            className={`h-full transition-all duration-700 ease-out ${
-              priceImpactBps > 100 ? "bg-yellow-400" : "bg-primary"
-            }`}
-            style={{ width: `${impactWidth}%` }}
-          />
-        </div>
-
-        {/* Multi-hop path visualization */}
-        {quote?.route && quote.route.length > 0 && (
-          <div className="space-y-1 pt-1">
-            <div className="text-mono-label" style={{ fontSize: 9 }}>ROUTE PATH</div>
-            {quote.route.map((leg, i) => {
-              const legRate = leg.fromToken === leg.toToken ? 1 : crossRate(leg.fromToken, leg.toToken) || (quote.midRate ?? liveRate);
-              return (
-                <div key={i} className="flex items-center gap-2 font-mono text-[11px]">
-                  <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest ${
-                    leg.kind === "bridge" ? "bg-accent text-accent-foreground" : "bg-primary/10 text-primary"
-                  }`}>
-                    {leg.kind}
-                  </span>
-                  <span className="text-foreground">{leg.fromToken}</span>
-                  <span className="text-muted-foreground">→</span>
-                  <span className="text-foreground">{leg.toToken}</span>
-                  {leg.fromChain !== leg.toChain && (
-                    <span className="text-muted-foreground text-[9px]">({leg.fromChain}→{leg.toChain})</span>
-                  )}
-                  <span className="ml-auto tabular-nums text-muted-foreground">
-                    {leg.fromToken !== leg.toToken ? legRate.toFixed(6) : "1:1"}
-                  </span>
-                  <span className="tabular-nums text-muted-foreground">{leg.fee_bps}bps</span>
-                  <span className="text-[9px] text-muted-foreground">{leg.protocol}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <div className="grid grid-cols-4 gap-2 font-mono text-[11px]">
+        <div className="grid grid-cols-3 gap-3 font-mono text-[11px]">
           <div>
             <div className="text-mono-label" style={{ fontSize: 9 }}>RATE</div>
-            <div className="tabular-nums">{(quote?.rate ?? liveRate).toFixed(6)}</div>
+            <div className="tabular-nums">{rate ? rate.toFixed(6) : "—"}</div>
           </div>
           <div>
-            <div className="text-mono-label" style={{ fontSize: 9 }}>PROTOCOL FEE</div>
-            <div className="tabular-nums">{((quote?.protocolFeeBps ?? 4) / 100).toFixed(2)}%</div>
+            <div className="text-mono-label" style={{ fontSize: 9 }}>FEE (1%)</div>
+            <div className="tabular-nums">{fee ? fee.toFixed(4) : "—"} {fromCurrency}</div>
           </div>
           <div>
-            <div className="text-mono-label" style={{ fontSize: 9 }}>TOTAL FEE</div>
-            <div className="tabular-nums">{((quote?.totalFeeBps ?? 4) / 100).toFixed(3)}%</div>
-          </div>
-          <div>
-            <div className="text-mono-label" style={{ fontSize: 9 }}>EST GAS</div>
-            <div className="tabular-nums">{formatUsd(quote?.gasEstimateUsd ?? 0.18)}</div>
+            <div className="text-mono-label" style={{ fontSize: 9 }}>EST OUT</div>
+            <div className="tabular-nums">{estOut ? estOut.toFixed(4) : "—"} {toCurrency}</div>
           </div>
         </div>
+        {quoteError && (
+          <div className="flex items-start gap-2 border border-destructive/50 bg-destructive/10 px-3 py-2 font-mono text-[11px] text-destructive">
+            <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+            <span>{quoteError}</span>
+          </div>
+        )}
       </div>
 
-      {/* On-chain phase indicator (Arc Testnet) */}
-      {isArcTestnet && wallet.connected && (
+      {/* Transaction status panel */}
+      {transactionId && (
         <div className="mt-4 border border-border bg-surface-1 p-3 font-mono text-[11px] space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <PhaseIndicator phase={onchain.phase} />
-              <span className="uppercase tracking-widest text-foreground">{phaseLabel(onchain.phase)}</span>
+              <StatusDot status={txStatus} />
+              <span className="uppercase tracking-widest text-foreground">{STATUS_LABEL[txStatus]}</span>
             </div>
-            {(onchain.phase === "failed" || onchain.phase === "confirmed") && (
-              <button
-                onClick={onchain.reset}
-                className="border border-border px-2 py-0.5 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-surface-2 hover:text-foreground"
-              >
-                Reset
-              </button>
-            )}
+            <span className="text-muted-foreground">tx {transactionId.slice(0, 10)}…</span>
           </div>
-
-          {/* Pre-confirmation: gas breakdown only */}
-          {!onchain.result && onchain.gasEstimate && (
-            <div className="space-y-2 border-t border-border pt-2">
-              <div className="grid grid-cols-2 gap-3 text-muted-foreground">
-                <div className="space-y-1">
-                  <div className="text-mono-label" style={{ fontSize: 9 }}>GAS BREAKDOWN</div>
-                  <div className="flex justify-between">
-                    <span>Units</span>
-                    <span className="tabular-nums text-foreground">{onchain.gasEstimate.gasUnits.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Gas price</span>
-                    <span className="tabular-nums text-foreground">{Number(onchain.gasEstimate.gasPriceGwei).toFixed(4)} gwei</span>
-                  </div>
-                  <div className="flex justify-between border-t border-border/50 pt-1">
-                    <span>Total</span>
-                    <span className="tabular-nums text-primary">{onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC</span>
-                  </div>
-                </div>
-                <div>
-                  <div className="text-mono-label" style={{ fontSize: 9 }}>RECIPIENT</div>
-                  <div className="text-[10px] tabular-nums text-foreground break-all">
-                    {wallet.address ? shortAddr(wallet.address) : "-"}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">Self-transfer (your wallet)</div>
-                </div>
-              </div>
+          {txStatus === "success" && (
+            <div className="flex items-center gap-2 border-t border-border pt-2 text-primary">
+              <Check size={12} /> Backend confirmed the route. No on-chain interaction was required from this client.
             </div>
           )}
-
-          {/* Post-confirmation result */}
-          {onchain.result && (
-            <div className="space-y-2 border-t border-border pt-2">
-              <div className="flex items-center justify-between">
-                <div className="text-mono-label" style={{ fontSize: 9 }}>
-                  VERIFICATION
-                </div>
-                <div className="font-mono text-[10px] uppercase tracking-widest">
-                  {onchain.result.transferVerified && onchain.result.status === "success" ? (
-                    <span className="text-primary">all checks passed</span>
-                  ) : (
-                    <span className="text-destructive">checks failed</span>
-                  )}
-                </div>
-              </div>
-
-              <VerificationGrid rows={buildVerificationRows(onchain.result)} />
-
-              <div className="flex flex-wrap items-center gap-2 pt-1 text-muted-foreground">
-                <span>TX</span>
-                <a
-                  href={onchain.result.explorerUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  {onchain.result.txHash.slice(0, 14)}…<ExternalLink size={10} className="ml-1 inline" />
-                </a>
-                <span className="ml-auto">
-                  Gas <span className="text-foreground tabular-nums">{onchain.result.gasUsed.toLocaleString()}</span>{" "}
-                  · <span className="tabular-nums">{onchain.result.gasCostUsdc.toFixed(6)} USDC</span>
-                </span>
-              </div>
-            </div>
-          )}
-
-          {onchain.error && (
-            <div className="border-t border-border pt-2 text-destructive">{onchain.error}</div>
-          )}
-
-          <div className="flex gap-2">
-            {onchain.result && (
-              <button
-                onClick={() => setDetailsOpen(true)}
-                className="flex flex-1 items-center justify-center gap-1 border border-border bg-surface-2 px-2 py-1.5 text-[11px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
-              >
-                <Info size={11} /> Transfer details
-              </button>
-            )}
-            {onchain.canRetry && onchain.phase === "failed" && (
-              <button
-                onClick={() => void onchain.retry()}
-                className="flex flex-1 items-center justify-center gap-1 border border-primary/50 bg-primary/10 px-2 py-1.5 text-[11px] uppercase tracking-widest text-primary hover:bg-primary/20"
-              >
-                <RotateCcw size={11} /> Retry transfer
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Pre-swap risk checks */}
-      {isArcTestnet && risks.length > 0 && (
-        <div className="mt-4 space-y-1">
-          {risks.map((r) => (
-            <div
-              key={r.id}
-              className={`flex items-start gap-2 border px-3 py-2 font-mono text-[11px] ${
-                r.level === "block"
-                  ? "border-destructive/50 bg-destructive/10 text-destructive"
-                  : "border-yellow-400/40 bg-yellow-400/10 text-yellow-400"
-              }`}
-            >
+          {txStatus === "failed" && (
+            <div className="flex items-start gap-2 border-t border-border pt-2 text-destructive">
               <AlertTriangle size={12} className="mt-0.5 shrink-0" />
-              <span>{r.msg}</span>
-              {r.id === "chain" && (
-                <button
-                  onClick={() => void wallet.switchChain("arc-testnet")}
-                  className="ml-auto underline"
-                >
-                  Switch
-                </button>
-              )}
+              <span>{(txDetails?.reason as string) ?? "Routing failed. Try again."}</span>
             </div>
-          ))}
+          )}
+          {txStatus === "pending" && (
+            <div className="flex items-center gap-2 border-t border-border pt-2 text-muted-foreground">
+              <Info size={12} /> Backend is routing the trade. Polling /tx/{transactionId.slice(0, 6)}…
+            </div>
+          )}
         </div>
       )}
 
       <button
         onClick={handleExecute}
-        disabled={executing || !amount || (isArcTestnet && !!blockingRisk)}
+        disabled={executing || !amount || quoting || !!quoteError}
         className="mt-5 flex w-full items-center justify-center gap-2 bg-primary py-3 font-mono text-sm font-semibold tracking-wider text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
         {executing ? (
           <>
-            <Loader2 size={14} className="animate-spin" /> {isArcTestnet ? "SENDING ON-CHAIN…" : "EXECUTING…"}
+            <Loader2 size={14} className="animate-spin" /> SUBMITTING…
           </>
         ) : user ? (
           <>
-            <Send size={14} /> {isArcTestnet ? "SEND ON ARC TESTNET →" : "EXECUTE SWAP →"}
+            <Send size={14} /> EXECUTE TRADE →
           </>
         ) : (
-          <>SIGN IN TO SWAP →</>
+          <>SIGN IN TO TRADE →</>
         )}
       </button>
 
       <div className="mt-3 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
-        <span>
-          {isArcTestnet && wallet.connected
-            ? `arc-testnet · bal ${onchainBal !== null ? onchainBal.toLocaleString() : "-"} USDC`
-            : wallet.connected
-              ? `wallet · ${wallet.address!.slice(0, 6)}…${wallet.address!.slice(-4)}`
-              : "Permit2 enabled · 0 approvals"}
-        </span>
-        <span className="text-primary">
-          {isArcTestnet ? "▌arc testnet" : "▌ready"}
-        </span>
+        <span>backend-routed · no wallet signing required</span>
+        <span className="text-primary">▌ready</span>
       </div>
-
-      {/* Faucet links + claim tracker (Arc Testnet) */}
-      {isArcTestnet && (
-        <div className="mt-3 border border-border bg-surface-1 p-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1 text-mono-label" style={{ fontSize: 9 }}>
-              <Droplets size={10} /> TESTNET USDC FAUCETS
-            </div>
-            <button
-              onClick={() => {
-                onchain.usdcBalance().then((b) => {
-                  setOnchainBal(b);
-                  toast.success(`Balance refreshed: ${b !== null ? b : "-"} USDC`);
-                });
-              }}
-              disabled={!wallet.connected}
-              className="border border-border px-2 py-0.5 text-[10px] uppercase tracking-widest text-muted-foreground hover:bg-surface-2 hover:text-foreground disabled:opacity-50"
-            >
-              Refresh balance
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {FAUCETS.map((f) => {
-              const claim = claims.find((c) => c.url === f.url);
-              return (
-                <a
-                  key={f.url}
-                  href={f.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={() => {
-                    recordClaim(f.url, f.label);
-                    setClaims(readClaims());
-                  }}
-                  className="flex items-center gap-1 border border-border px-2 py-1 font-mono text-[10px] text-primary hover:bg-surface-2"
-                  title={claim ? `Last claimed ${timeAgo(claim.attemptedAt)}` : "Open faucet"}
-                >
-                  {claim && <Check size={9} className="text-primary" />}
-                  {f.label} <ExternalLink size={8} />
-                </a>
-              );
-            })}
-          </div>
-          {claims.length > 0 && (
-            <div className="text-[10px] text-muted-foreground">
-              ✓ Claimed {claims.length} faucet{claims.length === 1 ? "" : "s"} · last {timeAgo(claims[0].attemptedAt)} ·
-              {" "}after claiming, click <span className="text-foreground">Refresh balance</span>.
-            </div>
-          )}
-        </div>
-      )}
-
-      {quote?.warnings.length ? (
-        <div className="mt-2 font-mono text-[10px] text-yellow-400">⚠ {quote.warnings.join(" · ")}</div>
-      ) : null}
-
-      <TransferDetailsDialog
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
-        result={onchain.result}
-        error={onchain.error}
-      />
     </div>
   );
 }
 
-type VerificationRow = {
-  label: string;
-  expected: string;
-  verified: string | null;
-  state: "pass" | "fail" | "pending";
-  reason: string;
-};
-
-function shortAddr(a: string): string {
-  if (!a) return "-";
-  if (a.length <= 18) return a;
-  return `${a.slice(0, 10)}…${a.slice(-8)}`;
-}
-
-function buildVerificationRows(
-  result: NonNullable<ReturnType<typeof useOnchainSwap>["result"]>,
-): VerificationRow[] {
-  const noEvent = result.verifiedRecipient === null && result.verifiedAmountUsdc === null;
-  return [
-    {
-      label: "Recipient",
-      expected: result.expectedRecipient,
-      verified: result.verifiedRecipient,
-      state: result.recipientMatch ? "pass" : "fail",
-      reason: result.recipientMatch
-        ? "Transfer event 'to' matches the expected recipient (your wallet)."
-        : noEvent
-          ? "No USDC Transfer event found in the receipt logs."
-          : "Transfer 'to' did not match the expected recipient.",
-    },
-    {
-      label: "Amount",
-      expected: `${result.expectedAmountUsdc} USDC`,
-      verified: result.verifiedAmountUsdc !== null ? `${result.verifiedAmountUsdc} USDC` : null,
-      state: result.amountMatch ? "pass" : "fail",
-      reason: result.amountMatch
-        ? "Transfer 'value' (6 decimals) matches the requested USDC amount exactly."
-        : noEvent
-          ? "No USDC Transfer event to read 'value' from."
-          : "Transfer 'value' differs from the requested USDC amount.",
-    },
-    {
-      label: "Tx status",
-      expected: "success",
-      verified: result.status,
-      state: result.status === "success" ? "pass" : "fail",
-      reason:
-        result.status === "success"
-          ? "Receipt status = 1 (success)."
-          : "Receipt status = 0 (reverted on-chain).",
-    },
-  ];
-}
-
-function VerificationGrid({ rows }: { rows: VerificationRow[] }) {
-  return (
-    <div className="space-y-1">
-      <div
-        className="grid grid-cols-[80px,1fr,1fr,auto] gap-2 border-b border-border pb-1 text-mono-label"
-        style={{ fontSize: 9 }}
-      >
-        <span>FIELD</span>
-        <span>EXPECTED</span>
-        <span>VERIFIED</span>
-        <span></span>
-      </div>
-      {rows.map((r) => {
-        const verifiedText =
-          r.state === "pending" ? "awaiting confirmation…" : r.verified ?? "no event";
-        const verifiedClass =
-          r.state === "pass"
-            ? "text-primary"
-            : r.state === "fail"
-              ? "text-destructive"
-              : "text-muted-foreground";
-        const Icon = r.state === "pass" ? Check : r.state === "fail" ? AlertTriangle : Info;
-        const iconClass =
-          r.state === "pass"
-            ? "text-primary"
-            : r.state === "fail"
-              ? "text-destructive"
-              : "text-muted-foreground";
-        return (
-          <div key={r.label} className="space-y-0.5">
-            <div className="grid grid-cols-[80px,1fr,1fr,auto] items-start gap-2">
-              <span className="text-muted-foreground">{r.label}</span>
-              <span className="break-all text-foreground">{r.expected}</span>
-              <span className={`break-all tabular-nums ${verifiedClass}`}>{verifiedText}</span>
-              <Icon size={12} className={`mt-0.5 ${iconClass}`} />
-            </div>
-            <div className="pl-[88px] text-[10px] text-muted-foreground">{r.reason}</div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function TransferDetailsDialog({
-  open,
-  onOpenChange,
-  result,
-  error,
-}: {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  result: ReturnType<typeof useOnchainSwap>["result"];
-  error: string | null;
-}) {
-  if (!result) return null;
-  const verified = result.transferVerified && result.status === "success";
-  const rows = buildVerificationRows(result);
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 font-mono text-sm uppercase tracking-widest">
-            {verified ? (
-              <Check className="text-primary" size={16} />
-            ) : (
-              <AlertTriangle className="text-destructive" size={16} />
-            )}
-            Transfer verification · {verified ? "passed" : "failed"}
-          </DialogTitle>
-          <DialogDescription className="font-mono text-[11px]">
-            Side-by-side comparison of expected vs verified Transfer event fields.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-3 font-mono text-[11px]">
-          <VerificationGrid rows={rows} />
-
-          <div className="grid grid-cols-2 gap-3 border-t border-border pt-2 text-muted-foreground">
-            <div>
-              <div className="text-mono-label" style={{ fontSize: 9 }}>GAS USED</div>
-              <div className="tabular-nums text-foreground">{result.gasUsed.toLocaleString()}</div>
-            </div>
-            <div>
-              <div className="text-mono-label" style={{ fontSize: 9 }}>GAS COST</div>
-              <div className="tabular-nums text-foreground">{result.gasCostUsdc.toFixed(6)} USDC</div>
-            </div>
-          </div>
-
-          <a
-            href={result.explorerUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1 text-primary hover:underline"
-          >
-            View on ArcScan <ExternalLink size={11} />
-          </a>
-
-          {error && (
-            <div className="border border-destructive/40 bg-destructive/10 p-2 text-destructive">
-              {error}
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-const PHASE_LABELS: Record<SwapPhase, string> = {
-  idle: "Ready",
-  "switching-chain": "Switching to Arc Testnet…",
-  "estimating-gas": "Estimating gas…",
-  simulating: "Simulating contract call…",
-  "awaiting-wallet": "Confirm in wallet…",
-  pending: "Waiting for receipt…",
-  confirming: "Verifying Transfer event…",
-  confirmed: "Confirmed ✓",
-  failed: "Failed",
-};
-function phaseLabel(p: SwapPhase) { return PHASE_LABELS[p]; }
-
-function PhaseIndicator({ phase }: { phase: SwapPhase }) {
-  const isActive = !["idle", "confirmed", "failed"].includes(phase);
-  const color = phase === "confirmed" ? "bg-primary" : phase === "failed" ? "bg-destructive" : "bg-primary";
+function StatusDot({ status }: { status: TxStatus | "idle" }) {
+  const color =
+    status === "success" ? "bg-primary" : status === "failed" ? "bg-destructive" : "bg-primary";
+  const isActive = status === "pending";
   return (
     <span className={`inline-block h-2 w-2 rounded-full ${color} ${isActive ? "animate-pulse-soft" : ""}`} />
   );
 }
 
-function TokenSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function CurrencySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <select
       value={value}
@@ -852,6 +389,7 @@ function TokenSelect({ value, onChange }: { value: string; onChange: (v: string)
     </select>
   );
 }
+
 
 function DepthChart() {
   return (

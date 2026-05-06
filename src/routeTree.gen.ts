@@ -14,6 +14,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountIndexRouteImport } from './routes/account.index'
+import { Route as TxTransactionIdRouteImport } from './routes/tx.$transactionId'
+import { Route as FxQuoteRouteImport } from './routes/fx.quote'
+import { Route as FxExecuteRouteImport } from './routes/fx.execute'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AccountWalletsRouteImport } from './routes/account.wallets'
 import { Route as AccountPreferencesRouteImport } from './routes/account.preferences'
@@ -43,6 +46,21 @@ const AccountIndexRoute = AccountIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AccountRoute,
+} as any)
+const TxTransactionIdRoute = TxTransactionIdRouteImport.update({
+  id: '/tx/$transactionId',
+  path: '/tx/$transactionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FxQuoteRoute = FxQuoteRouteImport.update({
+  id: '/fx/quote',
+  path: '/fx/quote',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FxExecuteRoute = FxExecuteRouteImport.update({
+  id: '/fx/execute',
+  path: '/fx/execute',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
@@ -74,6 +92,9 @@ export interface FileRoutesByFullPath {
   '/account/preferences': typeof AccountPreferencesRoute
   '/account/wallets': typeof AccountWalletsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/fx/execute': typeof FxExecuteRoute
+  '/fx/quote': typeof FxQuoteRoute
+  '/tx/$transactionId': typeof TxTransactionIdRoute
   '/account/': typeof AccountIndexRoute
 }
 export interface FileRoutesByTo {
@@ -84,6 +105,9 @@ export interface FileRoutesByTo {
   '/account/preferences': typeof AccountPreferencesRoute
   '/account/wallets': typeof AccountWalletsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/fx/execute': typeof FxExecuteRoute
+  '/fx/quote': typeof FxQuoteRoute
+  '/tx/$transactionId': typeof TxTransactionIdRoute
   '/account': typeof AccountIndexRoute
 }
 export interface FileRoutesById {
@@ -96,6 +120,9 @@ export interface FileRoutesById {
   '/account/preferences': typeof AccountPreferencesRoute
   '/account/wallets': typeof AccountWalletsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/fx/execute': typeof FxExecuteRoute
+  '/fx/quote': typeof FxQuoteRoute
+  '/tx/$transactionId': typeof TxTransactionIdRoute
   '/account/': typeof AccountIndexRoute
 }
 export interface FileRouteTypes {
@@ -109,6 +136,9 @@ export interface FileRouteTypes {
     | '/account/preferences'
     | '/account/wallets'
     | '/auth/callback'
+    | '/fx/execute'
+    | '/fx/quote'
+    | '/tx/$transactionId'
     | '/account/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -119,6 +149,9 @@ export interface FileRouteTypes {
     | '/account/preferences'
     | '/account/wallets'
     | '/auth/callback'
+    | '/fx/execute'
+    | '/fx/quote'
+    | '/tx/$transactionId'
     | '/account'
   id:
     | '__root__'
@@ -130,6 +163,9 @@ export interface FileRouteTypes {
     | '/account/preferences'
     | '/account/wallets'
     | '/auth/callback'
+    | '/fx/execute'
+    | '/fx/quote'
+    | '/tx/$transactionId'
     | '/account/'
   fileRoutesById: FileRoutesById
 }
@@ -139,6 +175,9 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   StatsRoute: typeof StatsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  FxExecuteRoute: typeof FxExecuteRoute
+  FxQuoteRoute: typeof FxQuoteRoute
+  TxTransactionIdRoute: typeof TxTransactionIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -177,6 +216,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/account/'
       preLoaderRoute: typeof AccountIndexRouteImport
       parentRoute: typeof AccountRoute
+    }
+    '/tx/$transactionId': {
+      id: '/tx/$transactionId'
+      path: '/tx/$transactionId'
+      fullPath: '/tx/$transactionId'
+      preLoaderRoute: typeof TxTransactionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fx/quote': {
+      id: '/fx/quote'
+      path: '/fx/quote'
+      fullPath: '/fx/quote'
+      preLoaderRoute: typeof FxQuoteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fx/execute': {
+      id: '/fx/execute'
+      path: '/fx/execute'
+      fullPath: '/fx/execute'
+      preLoaderRoute: typeof FxExecuteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/auth/callback': {
       id: '/auth/callback'
@@ -232,16 +292,10 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   StatsRoute: StatsRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  FxExecuteRoute: FxExecuteRoute,
+  FxQuoteRoute: FxQuoteRoute,
+  TxTransactionIdRoute: TxTransactionIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
