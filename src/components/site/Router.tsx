@@ -443,56 +443,33 @@ function SwapPanel() {
             )}
           </div>
 
-          {/* Pre-confirmation: what we will verify after the tx lands */}
-          {!onchain.result && (
+          {/* Pre-confirmation: gas breakdown only */}
+          {!onchain.result && onchain.gasEstimate && (
             <div className="space-y-2 border-t border-border pt-2">
-              <div className="text-mono-label" style={{ fontSize: 9 }}>
-                WILL VERIFY AFTER CONFIRMATION
-              </div>
-              <VerificationGrid
-                rows={[
-                  {
-                    label: "Recipient",
-                    expected: shortAddr(treasury),
-                    verified: null,
-                    state: "pending",
-                    reason: "Decoded from the on-chain Transfer event after receipt.",
-                  },
-                  {
-                    label: "Amount",
-                    expected: `${amount} USDC`,
-                    verified: null,
-                    state: "pending",
-                    reason: "Must equal the exact USDC value emitted by the USDC contract.",
-                  },
-                ]}
-              />
-              {onchain.gasEstimate && (
-                <div className="grid grid-cols-2 gap-3 pt-1 text-muted-foreground">
-                  <div className="space-y-1">
-                    <div className="text-mono-label" style={{ fontSize: 9 }}>GAS BREAKDOWN</div>
-                    <div className="flex justify-between">
-                      <span>Units</span>
-                      <span className="tabular-nums text-foreground">{onchain.gasEstimate.gasUnits.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Gas price</span>
-                      <span className="tabular-nums text-foreground">{Number(onchain.gasEstimate.gasPriceGwei).toFixed(4)} gwei</span>
-                    </div>
-                    <div className="flex justify-between border-t border-border/50 pt-1">
-                      <span>Total</span>
-                      <span className="tabular-nums text-primary">{onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC</span>
-                    </div>
+              <div className="grid grid-cols-2 gap-3 text-muted-foreground">
+                <div className="space-y-1">
+                  <div className="text-mono-label" style={{ fontSize: 9 }}>GAS BREAKDOWN</div>
+                  <div className="flex justify-between">
+                    <span>Units</span>
+                    <span className="tabular-nums text-foreground">{onchain.gasEstimate.gasUnits.toLocaleString()}</span>
                   </div>
-                  <div>
-                    <div className="text-mono-label" style={{ fontSize: 9 }}>TREASURY</div>
-                    <div className="text-[10px] tabular-nums text-foreground break-all">{shortAddr(treasury)}</div>
-                    <a href="/account/preferences" className="text-[10px] text-primary hover:underline">
-                      Change in settings
-                    </a>
+                  <div className="flex justify-between">
+                    <span>Gas price</span>
+                    <span className="tabular-nums text-foreground">{Number(onchain.gasEstimate.gasPriceGwei).toFixed(4)} gwei</span>
+                  </div>
+                  <div className="flex justify-between border-t border-border/50 pt-1">
+                    <span>Total</span>
+                    <span className="tabular-nums text-primary">{onchain.gasEstimate.gasCostUsdc.toFixed(6)} USDC</span>
                   </div>
                 </div>
-              )}
+                <div>
+                  <div className="text-mono-label" style={{ fontSize: 9 }}>TREASURY</div>
+                  <div className="text-[10px] tabular-nums text-foreground break-all">{shortAddr(treasury)}</div>
+                  <a href="/account/preferences" className="text-[10px] text-primary hover:underline">
+                    Change in settings
+                  </a>
+                </div>
+              </div>
             </div>
           )}
 
