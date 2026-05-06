@@ -176,7 +176,7 @@ export function useOnchainSwap() {
 
         // 4. Write transaction
         setPhase("awaiting-wallet");
-        const hash = await wc.writeContract(simulation.request);
+        const hash = await wc.writeContract({ ...simulation.request, chain: arcTestnet, account: address });
 
         // 5. Wait for receipt
         setPhase("pending");
