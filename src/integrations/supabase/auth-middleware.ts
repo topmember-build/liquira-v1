@@ -2,50 +2,45 @@
 import { createMiddleware } from '@tanstack/react-start'
 import { getRequest } from '@tanstack/react-start/server'
 import { createClient } from '@supabase/supabase-js'
-import { supabase as browserSupabase } from './client'
 import type { Database } from './types'
 
-export const requireSupabaseAuth = createMiddleware({ type: 'function' })
-  .client(async ({ next }) => {
-    // Forward the current user's access token to the server fn so the
-    // server-side middleware can authenticate the request.
-    const { data } = await browserSupabase.auth.getSession()
-    const token = data.session?.access_token
-    return next({
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-  })
-  .server(
+
+
+export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
     
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-      throw new Error(
-        'Missing Supabase environment variables. Ensure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are set.'
-      );
+      const missing = [
+        ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
+        ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
+      ];
+      const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
+      console.error(`[Supabase] ${message}`);
+      throw new Response(message, { status: 500 });
     }
     
     const request = getRequest();
 
     if (!request?.headers) {
-      throw new Error('Unauthorized: No request headers available');
+      throw new Response('Unauthorized: No request headers available', { status: 401 });
     }
 
     const authHeader = request.headers.get('authorization');
 
     if (!authHeader) {
-      throw new Error('Unauthorized: No authorization header provided');
+      throw new Response('Unauthorized: No authorization header provided', { status: 401 });
     }
 
     if (!authHeader.startsWith('Bearer ')) {
-      throw new Error('Unauthorized: Only Bearer tokens are supported');
+      throw new Response('Unauthorized: Only Bearer tokens are supported', { status: 401 });
     }
 
     const token = authHeader.replace('Bearer ', '');
     if (!token) {
-      throw new Error('Unauthorized: No token provided');
+      throw new Response('Unauthorized: No token provided', { status: 401 });
     }
 
     const supabase = createClient<Database>(
@@ -67,11 +62,11 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' })
 
     const { data, error } = await supabase.auth.getClaims(token);
     if (error || !data?.claims) {
-      throw new Error('Unauthorized: Invalid token');
+      throw new Response('Unauthorized: Invalid token', { status: 401 });
     }
 
     if (!data.claims.sub) {
-      throw new Error('Unauthorized: No user ID found in token');
+      throw new Response('Unauthorized: No user ID found in token', { status: 401 });
     }
 
     return next({
