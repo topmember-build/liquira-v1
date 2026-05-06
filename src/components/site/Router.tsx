@@ -12,7 +12,7 @@ import { simulateSwap, executeSwap } from "@/server/swaps.functions";
 import { useOnchainSwap, type SwapPhase } from "@/hooks/use-onchain-swap";
 import { FAUCETS, arcTestnet } from "@/lib/arc-testnet";
 import { CHAIN_ID_REVERSE } from "@/lib/wagmi";
-import { getTreasuryAddress } from "@/lib/treasury";
+
 import { readClaims, recordClaim, timeAgo, type FaucetClaim } from "@/lib/faucet-tracker";
 import type { Quote } from "@/lib/quote-engine";
 import { useNavigate } from "@tanstack/react-router";
@@ -67,7 +67,7 @@ function SwapPanel() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [pulseKey, setPulseKey] = useState(0);
   const [onchainBal, setOnchainBal] = useState<number | null>(null);
-  const [treasury, setTreasury] = useState<string>(() => getTreasuryAddress());
+  
   const [claims, setClaims] = useState<FaucetClaim[]>(() => readClaims());
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -85,10 +85,6 @@ function SwapPanel() {
     }
   }, [isArcTestnet, wallet.connected, wallet.address, onchain.usdcBalance]);
 
-  // Refresh treasury from storage in case settings page updated it
-  useEffect(() => {
-    setTreasury(getTreasuryAddress());
-  }, []);
 
   // Live gas estimate (debounced) when on Arc with valid amount
   useEffect(() => {
@@ -463,11 +459,11 @@ function SwapPanel() {
                   </div>
                 </div>
                 <div>
-                  <div className="text-mono-label" style={{ fontSize: 9 }}>TREASURY</div>
-                  <div className="text-[10px] tabular-nums text-foreground break-all">{shortAddr(treasury)}</div>
-                  <a href="/account/preferences" className="text-[10px] text-primary hover:underline">
-                    Change in settings
-                  </a>
+                  <div className="text-mono-label" style={{ fontSize: 9 }}>RECIPIENT</div>
+                  <div className="text-[10px] tabular-nums text-foreground break-all">
+                    {wallet.address ? shortAddr(wallet.address) : "-"}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">Self-transfer (your wallet)</div>
                 </div>
               </div>
             </div>
@@ -548,11 +544,6 @@ function SwapPanel() {
             >
               <AlertTriangle size={12} className="mt-0.5 shrink-0" />
               <span>{r.msg}</span>
-              {r.id === "treasury" && (
-                <a href="/account/preferences" className="ml-auto underline">
-                  Fix
-                </a>
-              )}
               {r.id === "chain" && (
                 <button
                   onClick={() => void wallet.switchChain("arc-testnet")}
@@ -687,10 +678,10 @@ function buildVerificationRows(
       verified: result.verifiedRecipient,
       state: result.recipientMatch ? "pass" : "fail",
       reason: result.recipientMatch
-        ? "Transfer event 'to' matches the configured treasury address."
+        ? "Transfer event 'to' matches the expected recipient (your wallet)."
         : noEvent
           ? "No USDC Transfer event found in the receipt logs."
-          : "Transfer 'to' did not match the configured treasury address.",
+          : "Transfer 'to' did not match the expected recipient.",
     },
     {
       label: "Amount",

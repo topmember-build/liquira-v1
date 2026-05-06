@@ -25,8 +25,6 @@ export const ARC_CONTRACTS = {
   MULTICALL3: "0xcA11bde05977b3631167028862bE2a173976CA11" as const,
 };
 
-// Default destination address for on-chain USDC transfers (overridable in Preferences).
-export const TREASURY_ADDRESS = "0x000000000000000000000000000000000000dEaD" as const;
 
 // Minimal ERC-20 ABI for transfer + balance
 export const ERC20_TRANSFER_ABI = [
