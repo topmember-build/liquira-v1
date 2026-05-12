@@ -31,55 +31,74 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
 
   const refresh = useCallback(async () => {
-    if (!user) {
+    if (!user || !supabase?.from) {
       setNotifications([]);
       return;
     }
     setLoading(true);
-    const { data } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    setNotifications((data ?? []) as Notification[]);
-    setLoading(false);
+    try {
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      setNotifications((data ?? []) as Notification[]);
+    } catch (err) {
+      console.warn("[NotificationsContext] Failed to fetch notifications:", err);
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
   }, [user?.id]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  // Realtime
+  // Realtime (only if Supabase is configured)
   useEffect(() => {
-    if (!user) return;
-    const ch = supabase
-      .channel(`notif:${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          const n = payload.new as Notification;
-          setNotifications((prev) => [n, ...prev].slice(0, 50));
-          toast(n.title, { description: n.body ?? undefined });
-        },
-      )
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(ch);
-    };
+    if (!user || !supabase?.channel) {
+      return;
+    }
+    
+    try {
+      const ch = supabase
+        .channel(`notif:${user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            const n = payload.new as Notification;
+            setNotifications((prev) => [n, ...prev].slice(0, 50));
+            toast(n.title, { description: n.body ?? undefined });
+          },
+        )
+        .subscribe();
+      return () => {
+        void supabase.removeChannel(ch);
+      };
+    } catch (err) {
+      console.warn("[NotificationsContext] Failed to setup realtime notifications:", err);
+    }
   }, [user?.id]);
 
   const markRead = useCallback(async (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)));
-    await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id);
+    if (supabase?.from) {
+      await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", id).catch((err) => {
+        console.warn("[NotificationsContext] Failed to mark as read:", err);
+      });
+    }
   }, []);
 
   const markAllRead = useCallback(async () => {
-    if (!user) return;
+    if (!user || !supabase?.from) return;
     const now = new Date().toISOString();
     setNotifications((prev) => prev.map((n) => ({ ...n, read_at: n.read_at ?? now })));
-    await supabase.from("notifications").update({ read_at: now }).eq("user_id", user.id).is("read_at", null);
+    await supabase.from("notifications").update({ read_at: now }).eq("user_id", user.id).is("read_at", null).catch((err) => {
+      console.warn("[NotificationsContext] Failed to mark all as read:", err);
+    });
   }, [user?.id]);
 
   const unread = notifications.filter((n) => !n.read_at).length;

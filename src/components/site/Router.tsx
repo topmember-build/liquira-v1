@@ -7,6 +7,10 @@ import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { fxService, type FxQuote, type TxStatus } from "@/lib/fx-service";
 import { useNavigate } from "@tanstack/react-router";
+import { useWallet } from "@/contexts/WalletContext";
+import { usePayment } from "@/contexts/PaymentContext";
+import { useQuote, useExecute } from "@/hooks/useBackendAPI";
+import { validateWalletAddress } from "@/lib/validation";
 
 export function RouterSection() {
   return (
@@ -48,13 +52,17 @@ const STATUS_LABEL: Record<TxStatus | "idle", string> = {
 function SwapPanel() {
   const { user } = useAuth();
   const { formatUsd } = useDisplayCurrency();
+  const { isConnected, address } = useWallet();
+  const { formData, updateFormData, resetPayment } = usePayment();
   const navigate = useNavigate();
 
   const [fromCurrency, setFromCurrency] = useState("USDC");
   const [toCurrency, setToCurrency] = useState("EURC");
   const [amountStr, setAmountStr] = useState("10000");
+  const [recipientAddress, setRecipientAddress] = useState("");
   const [slippagePct, setSlippagePct] = useState(0.3);
   const [routeMode, setRouteMode] = useState<RouteMode>("best");
+  const [isPaymentMode, setIsPaymentMode] = useState(false);
 
   const [quote, setQuote] = useState<FxQuote | null>(null);
   const [quoteError, setQuoteError] = useState<string | null>(null);
@@ -69,9 +77,24 @@ function SwapPanel() {
 
   const amount = Number(amountStr) || 0;
 
-  // Debounced quote preview from backend.
+  // Payment quote hook for payment mode
+  const paymentQuote = useQuote(
+    isPaymentMode ? {
+      sourceToken: fromCurrency,
+      destinationToken: toCurrency,
+      amount: amount,
+      recipientAddress: recipientAddress,
+      sourceChain: "ethereum", // Default chain
+      destinationChain: "ethereum", // Default chain
+    } : null
+  );
+
+  // Execute hook for payment mode
+  const executePayment = useExecute();
+
+  // Backend quote for demo mode
   useEffect(() => {
-    if (!amount || amount <= 0) {
+    if (isPaymentMode || !amount || amount <= 0) {
       setQuote(null);
       setQuoteError(null);
       return;
@@ -97,7 +120,7 @@ function SwapPanel() {
       cancelled = true;
       clearTimeout(id);
     };
-  }, [fromCurrency, toCurrency, amount]);
+  }, [fromCurrency, toCurrency, amount, isPaymentMode]);
 
   // Poll transaction status until terminal.
   useEffect(() => {
@@ -135,29 +158,57 @@ function SwapPanel() {
   };
 
   const handleExecute = async () => {
-    if (!user) {
-      toast.error("Sign in to execute trades", {
-        action: { label: "Sign in", onClick: () => navigate({ to: "/login", search: { redirect: "/" } }) },
+    if (isPaymentMode) {
+      // Payment mode - use full payment interface
+      if (!isConnected) {
+        toast.error("Please connect your wallet first");
+        return;
+      }
+      if (!recipientAddress || !validateWalletAddress(recipientAddress)) {
+        toast.error("Please enter a valid recipient address");
+        return;
+      }
+      if (!amount || amount <= 0) {
+        toast.error("Enter an amount");
+        return;
+      }
+
+      // Update payment context
+      updateFormData({
+        sourceToken: fromCurrency,
+        destinationToken: toCurrency,
+        amount: amount,
+        recipientAddress: recipientAddress,
+        sourceChain: "ethereum",
+        destinationChain: "ethereum",
       });
+
+      // Navigate to payment interface
+      navigate({ to: "/payment" });
       return;
     }
+
+    // Demo mode - backend routing
     if (!amount || amount <= 0) {
       toast.error("Enter an amount");
       return;
     }
+
     setExecuting(true);
     setTxStatus("idle");
     setTxDetails(null);
     setTransactionId(null);
+
     try {
       const res = await fxService.executeTrade({
         fromCurrency,
         toCurrency,
         amount,
-        userId: user.id,
       });
+
       setTransactionId(res.transactionId);
       setTxStatus(res.status);
+
       toast.success("Trade submitted", {
         description: `Tx ${res.transactionId.slice(0, 8)}…`,
       });
@@ -168,32 +219,40 @@ function SwapPanel() {
     }
   };
 
-  const slippageBps = Math.round(slippagePct * 100);
-  const rate = quote?.rate ?? 0;
-  const fee = quote?.fee ?? 0;
-  const estOut = quote?.estimatedAmount ?? 0;
-  const minReceived = estOut * (1 - slippageBps / 10_000);
+const slippageBps = Math.round(slippagePct * 100);
 
+const rate = quote?.rate ?? 0;
+
+const fee = quote?.fee ?? 0;
+
+const estOut = quote?.estimatedAmount ?? 0;
+
+const minReceived = estOut * (1 - slippageBps / 10_000);
   return (
     <div className="border border-border bg-background p-6">
       <div className="flex items-center justify-between font-mono text-[11px]">
         <div className="flex items-center gap-2 tracking-widest text-muted-foreground">
           <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-primary" />
-          <span className="text-foreground">SWAP</span>
-          <span>· INTENT-BASED</span>
+          <span className="text-foreground">{isPaymentMode ? "PAYMENT" : "SWAP"}</span>
+          <span>· {isPaymentMode ? "WALLET-CONNECTED" : "INTENT-BASED"}</span>
         </div>
         <div className="flex items-center gap-1 border border-border">
-          {(["best", "direct", "multihop"] as RouteMode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => setRouteMode(m)}
-              className={`px-2 py-1 text-[10px] uppercase tracking-widest ${
-                routeMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {m}
-            </button>
-          ))}
+          <button
+            onClick={() => setIsPaymentMode(false)}
+            className={`px-2 py-1 text-[10px] uppercase tracking-widest ${
+              !isPaymentMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Demo
+          </button>
+          <button
+            onClick={() => setIsPaymentMode(true)}
+            className={`px-2 py-1 text-[10px] uppercase tracking-widest ${
+              isPaymentMode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Payment
+          </button>
         </div>
       </div>
 
@@ -231,6 +290,30 @@ function SwapPanel() {
           </div>
         </div>
       </div>
+
+      {/* Recipient Address - Payment Mode Only */}
+      {isPaymentMode && (
+        <div className="mt-4 border border-border bg-surface-1 p-4">
+          <div className="flex items-center justify-between text-mono-label">
+            <span>RECIPIENT ADDRESS</span>
+            <span className="text-primary">Required</span>
+          </div>
+          <div className="mt-2">
+            <input
+              value={recipientAddress}
+              onChange={(e) => setRecipientAddress(e.target.value)}
+              placeholder="0x..."
+              className="w-full bg-transparent font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+          <div className="mt-2 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
+            <span>Enter the wallet address to send payment to</span>
+            {recipientAddress && !validateWalletAddress(recipientAddress) && (
+              <span className="text-destructive">Invalid address</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Flip */}
       <div className="my-2 flex justify-center">
@@ -286,23 +369,52 @@ function SwapPanel() {
       <div className="mt-4 border border-border bg-surface-1 p-4 space-y-3">
         <div className="flex items-center justify-between text-mono-label">
           <span>QUOTE PREVIEW</span>
-          <span className="text-primary">{quoting ? "refreshing…" : "from /fx/quote"}</span>
+          <span className="text-primary">
+            {isPaymentMode
+              ? (paymentQuote.isLoading ? "loading…" : paymentQuote.error ? "error" : "from /api/quote")
+              : (quoting ? "refreshing…" : "from /fx/quote")
+            }
+          </span>
         </div>
-        <div className="grid grid-cols-3 gap-3 font-mono text-[11px]">
-          <div>
-            <div className="text-mono-label" style={{ fontSize: 9 }}>RATE</div>
-            <div className="tabular-nums">{rate ? rate.toFixed(6) : "—"}</div>
+        {isPaymentMode ? (
+          // Payment mode quotes
+          <div className="space-y-3">
+            {paymentQuote.data?.quotes?.map((quote, index) => (
+              <div key={index} className="border border-border bg-background p-3 rounded">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-mono">{quote.provider}</span>
+                  <span className="font-mono text-primary">{quote.estimatedOutput?.toFixed(4)} {toCurrency}</span>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Fee: ${quote.fees?.total?.toFixed(2)} • Route: {quote.route?.length} steps
+                </div>
+              </div>
+            ))}
+            {paymentQuote.error && (
+              <div className="flex items-start gap-2 border border-destructive/50 bg-destructive/10 px-3 py-2 font-mono text-[11px] text-destructive">
+                <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                <span>{paymentQuote.error.message}</span>
+              </div>
+            )}
           </div>
-          <div>
-            <div className="text-mono-label" style={{ fontSize: 9 }}>FEE (1%)</div>
-            <div className="tabular-nums">{fee ? fee.toFixed(4) : "—"} {fromCurrency}</div>
+        ) : (
+          // Demo mode quotes
+          <div className="grid grid-cols-3 gap-3 font-mono text-[11px]">
+            <div>
+              <div className="text-mono-label" style={{ fontSize: 9 }}>RATE</div>
+              <div className="tabular-nums">{rate ? rate.toFixed(6) : "—"}</div>
+            </div>
+            <div>
+              <div className="text-mono-label" style={{ fontSize: 9 }}>FEE (1%)</div>
+              <div className="tabular-nums">{fee ? fee.toFixed(4) : "—"} {fromCurrency}</div>
+            </div>
+            <div>
+              <div className="text-mono-label" style={{ fontSize: 9 }}>EST OUT</div>
+              <div className="tabular-nums">{estOut ? estOut.toFixed(4) : "—"} {toCurrency}</div>
+            </div>
           </div>
-          <div>
-            <div className="text-mono-label" style={{ fontSize: 9 }}>EST OUT</div>
-            <div className="tabular-nums">{estOut ? estOut.toFixed(4) : "—"} {toCurrency}</div>
-          </div>
-        </div>
-        {quoteError && (
+        )}
+        {!isPaymentMode && quoteError && (
           <div className="flex items-start gap-2 border border-destructive/50 bg-destructive/10 px-3 py-2 font-mono text-[11px] text-destructive">
             <AlertTriangle size={12} className="mt-0.5 shrink-0" />
             <span>{quoteError}</span>
@@ -341,10 +453,18 @@ function SwapPanel() {
 
       <button
         onClick={handleExecute}
-        disabled={executing || !amount || quoting || !!quoteError}
+        disabled={
+          isPaymentMode
+            ? !isConnected || !recipientAddress || !validateWalletAddress(recipientAddress) || !amount || paymentQuote.isLoading
+            : executing || !amount || quoting || !!quoteError
+        }
         className="mt-5 flex w-full items-center justify-center gap-2 bg-primary py-3 font-mono text-sm font-semibold tracking-wider text-primary-foreground hover:opacity-90 disabled:opacity-50"
       >
-        {executing ? (
+        {isPaymentMode ? (
+          <>
+            <Send size={14} /> ROUTE PAYMENT →
+          </>
+        ) : executing ? (
           <>
             <Loader2 size={14} className="animate-spin" /> SUBMITTING…
           </>
@@ -358,7 +478,12 @@ function SwapPanel() {
       </button>
 
       <div className="mt-3 flex items-center justify-between font-mono text-[10px] text-muted-foreground">
-        <span>backend-routed · no wallet signing required</span>
+        <span>
+          {isPaymentMode
+            ? "wallet-connected · real payments"
+            : "backend-routed · no wallet signing required"
+          }
+        </span>
         <span className="text-primary">▌ready</span>
       </div>
     </div>
@@ -446,6 +571,7 @@ const ROUTES: { hops: Hop[]; notional: string; settle: string; saved: string }[]
   { hops: [{ token: "GBPT", flag: "🇬🇧" }, { token: "USDC", flag: "🇺🇸" }, { token: "NGNX", flag: "🇳🇬" }], notional: "$50,000", settle: "~ 0.7s", saved: "3.96" },
   { hops: [{ token: "MXNB", flag: "🇲🇽" }, { token: "USDC", flag: "🇺🇸" }, { token: "EURC", flag: "🇪🇺" }, { token: "KRW1", flag: "🇰🇷" }], notional: "$100,000", settle: "~ 0.9s", saved: "5.21" },
   { hops: [{ token: "NGNX", flag: "🇳🇬" }, { token: "USDC", flag: "🇺🇸" }, { token: "BRZ", flag: "🇧🇷" }], notional: "$8,500", settle: "~ 0.6s", saved: "2.04" },
+  { hops: [{ token: "AEDC", flag: "🇦🇪" }, { token: "USDC", flag: "🇺🇸" }, { token: "EURC", flag: "🇪🇺" }], notional: "$30,000", settle: "~ 0.6s", saved: "3.12" },
 ];
 
 function shortHash(seed: number): string {

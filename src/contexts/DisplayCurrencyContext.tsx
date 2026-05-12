@@ -33,9 +33,14 @@ export function DisplayCurrencyProvider({ children }: { children: ReactNode }) {
     return v === "NGN" || v === "EUR" || v === "GBP" || v === "USD" ? v : "USD";
   });
 
-  // Pull from profile when user logs in
+  // Pull from profile when user logs in (Supabase optional)
   useEffect(() => {
     if (!user) return;
+    if (!supabase?.from) {
+      console.warn("[DisplayCurrencyContext] Supabase not configured - using localStorage only");
+      return;
+    }
+    
     let cancelled = false;
     supabase
       .from("profiles")
@@ -49,6 +54,9 @@ export function DisplayCurrencyProvider({ children }: { children: ReactNode }) {
           setCurrencyState(v);
           window.localStorage.setItem(STORAGE_KEY, v);
         }
+      })
+      .catch((err) => {
+        console.warn("[DisplayCurrencyContext] Failed to fetch currency from Supabase:", err);
       });
     return () => {
       cancelled = true;
@@ -58,8 +66,10 @@ export function DisplayCurrencyProvider({ children }: { children: ReactNode }) {
   const setCurrency = (c: DisplayCurrency) => {
     setCurrencyState(c);
     if (typeof window !== "undefined") window.localStorage.setItem(STORAGE_KEY, c);
-    if (user) {
-      void supabase.from("profiles").update({ display_currency: c }).eq("id", user.id);
+    if (user && supabase?.from) {
+      void supabase.from("profiles").update({ display_currency: c }).eq("id", user.id).catch((err) => {
+        console.warn("[DisplayCurrencyContext] Failed to update currency in Supabase:", err);
+      });
     }
   };
 

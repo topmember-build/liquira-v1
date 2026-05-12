@@ -36,6 +36,7 @@ export const STABLES: Stable[] = [
   { symbol: "MXNB", name: "Mexican Peso Stable", pegCurrency: "MXN", pegValueUsd: 0.0512, decimals: 6, color: "#006847" },
   { symbol: "SGDX", name: "Singapore Dollar Stable", pegCurrency: "SGD", pegValueUsd: 0.7421, decimals: 6, color: "#EF3340" },
   { symbol: "NGNX", name: "Naira Stable", pegCurrency: "NGN", pegValueUsd: 0.00062, decimals: 6, color: "#008751" },
+  { symbol: "AEDC", name: "Dirham Coin", pegCurrency: "AED", pegValueUsd: 0.2724, decimals: 6, color: "#007A3D" },
 ];
 
 export function getStable(symbol: string): Stable | undefined {

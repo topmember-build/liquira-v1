@@ -17,9 +17,9 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
         ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
         ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
       ];
-      const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
-      console.error(`[Supabase] ${message}`);
-      throw new Response(message, { status: 500 });
+      console.warn(`[Supabase Auth] Optional middleware skipped - config missing: ${missing.join(', ')}. Using Dynamic Labs auth instead.`);
+      // Skip Supabase auth check and continue with Dynamic Labs auth
+      return next();
     }
     
     const request = getRequest();

@@ -11,6 +11,7 @@ const STABLES = [
   { code: "MXNB", flag: "🇲🇽" },
   { code: "SGDX", flag: "🇸🇬" },
   { code: "NGNX", flag: "🇳🇬" },
+  { code: "AEDC", flag: "🇦🇪" },
 ];
 
 export function Hero() {
@@ -29,7 +30,7 @@ export function Hero() {
             <span className="text-border-strong">·</span>
             <span>SOLVER V0.3</span>
             <span className="text-border-strong">·</span>
-            <span>11 STABLES · ₦ NGNX</span>
+            <span>9 STABLES · ₦ NGNX</span>
           </div>
 
           <h1 className="text-[clamp(2.75rem,7vw,5.5rem)] leading-[1.02] font-medium tracking-[-0.02em]">
@@ -43,8 +44,8 @@ export function Hero() {
 
           <p className="mt-8 max-w-xl text-[15px] leading-relaxed text-muted-foreground">
             Liquira settles cross-currency payments on Arc through depth-aware,
-            multi-stablecoin liquidity. Eleven native stables - USDC, EURC, KRW1,
-            JPYC, NGNX and more - routed at sub-basis-point slippage in{" "}
+            multi-stablecoin liquidity. Nine native stables - USDC, EURC, KRW1,
+            JPYC, NGNX, AEDC and more - routed at sub-basis-point slippage in{" "}
             <span className="text-foreground">under 400 ms</span>.
           </p>
 

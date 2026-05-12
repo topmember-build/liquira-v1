@@ -118,7 +118,7 @@ export function StatusBar() {
   return (
     <div className="border-b border-border bg-background py-2">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between px-6 font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        <span>LIQUIRA · FX ROUTER · V0.3.1</span>
+        <span>LIQUIRA · FX ROUTER · V1.0.1</span>
         <span className="hidden md:flex items-center gap-2">
           <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
           {statusLabel}

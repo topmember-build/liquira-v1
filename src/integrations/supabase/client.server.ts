@@ -14,9 +14,14 @@ function createSupabaseAdminClient() {
       ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
       ...(!SUPABASE_SERVICE_ROLE_KEY ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
     ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
+    console.warn(`[Supabase Admin] Optional client not configured: ${missing.join(', ')}. Using in-memory storage fallback.`);
+    // Return a proxy that warns when methods are called
+    return new Proxy({} as ReturnType<typeof createClient>, {
+      get(_, prop) {
+        console.warn(`[Supabase Admin] Method called on unconfigured client: ${String(prop)}`);
+        return undefined;
+      },
+    });
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {

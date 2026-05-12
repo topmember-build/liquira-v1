@@ -13,9 +13,17 @@ function createSupabaseClient() {
       ...(!SUPABASE_URL ? ['SUPABASE_URL'] : []),
       ...(!SUPABASE_PUBLISHABLE_KEY ? ['SUPABASE_PUBLISHABLE_KEY'] : []),
     ];
-    const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Connect Supabase in Lovable Cloud.`;
-    console.error(`[Supabase] ${message}`);
-    throw new Error(message);
+    console.warn(`[Supabase] Optional client not configured: ${missing.join(', ')}. Using fallback mode with Dynamic Labs auth.`);
+
+    const fallbackAuth = {
+      getSession: async () => ({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } }, error: null }),
+      signOut: async () => ({ data: null, error: null }),
+    };
+
+    return {
+      auth: fallbackAuth,
+    } as unknown as ReturnType<typeof createClient>;
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {

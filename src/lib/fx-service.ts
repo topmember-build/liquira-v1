@@ -7,17 +7,19 @@ export type FxQuote = {
   rate: number;
   fee: number;
   estimatedAmount: number;
+  protocolFee: number;
+  gasFee: number;
 };
 
 export type ExecuteTradeInput = {
   fromCurrency: string;
   toCurrency: string;
   amount: number;
-  userId: string;
+  destinationAddress?: string;
 };
 
 export type ExecuteTradeResult = {
-  status: "pending";
+  status: TxStatus;
   transactionId: string;
   fromAmount: number;
   toAmount: number;

@@ -6,6 +6,8 @@ import { NotificationsProvider } from "@/contexts/NotificationsContext";
 import { PricesProvider } from "@/contexts/PricesContext";
 import { DisplayCurrencyProvider } from "@/contexts/DisplayCurrencyContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { PaymentProvider } from "@/contexts/PaymentContext";
+import { DynamicProvider } from "@/integrations/dynamic/provider";
 
 import appCss from "../styles.css?url";
 
@@ -84,18 +86,22 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <PricesProvider>
-          <DisplayCurrencyProvider>
-            <NotificationsProvider>
-              <WalletProvider>
-                <Outlet />
-              </WalletProvider>
-            </NotificationsProvider>
-          </DisplayCurrencyProvider>
-        </PricesProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <DynamicProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <PricesProvider>
+            <DisplayCurrencyProvider>
+              <NotificationsProvider>
+                <WalletProvider>
+                  <PaymentProvider>
+                    <Outlet />
+                  </PaymentProvider>
+                </WalletProvider>
+              </NotificationsProvider>
+            </DisplayCurrencyProvider>
+          </PricesProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </DynamicProvider>
   );
 }

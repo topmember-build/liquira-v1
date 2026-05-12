@@ -1,6 +1,14 @@
 /**
  * Mock FX engine. Pure functions, server-only.
  * Future: replace with live rates from a price oracle (Circle, Chainlink, internal).
+ * 
+ * ⚠️  ARCHITECTURE CONSTRAINTS:
+ * - This module provides RATE CALCULATION ONLY
+ * - NO Fireblocks integration (completely removed)
+ * - All actual transaction execution goes through /fx/execute → Arc settlement
+ * - Circle is ONLY for treasury balance checks, NOT for transaction signing
+ * - Dynamic provider handles authentication/wallets ONLY (frontend)
+ * - Backend receives userId + walletAddress from Dynamic, not wallet signing
  */
 
 // Hard-coded rates relative to USD. Extend freely.
@@ -17,10 +25,15 @@ const USD_RATES: Record<string, number> = {
   KRW1: 1380,
   MXNB: 17.2,
   BRZ: 5.1,
+  AEDC: 3.67,
 };
 
-export const FEE_RATE = 0.01; // 1%
+export const FEE_RATE = 0.0004; // 4 bps (0.04%)
 
+/**
+ * Calculate FX rate between two currencies.
+ * Pure function, no side effects.
+ */
 export function calculate_rate(from: string, to: string): number {
   const f = USD_RATES[from.toUpperCase()];
   const t = USD_RATES[to.toUpperCase()];
@@ -28,10 +41,18 @@ export function calculate_rate(from: string, to: string): number {
   return t / f;
 }
 
+/**
+ * Calculate transaction fee based on amount.
+ * Pure function, no side effects.
+ */
 export function calculate_fee(amount: number): number {
   return amount * FEE_RATE;
 }
 
+/**
+ * Calculate output amount for a swap (amount - fee) * rate.
+ * Pure function, no side effects.
+ */
 export function calculate_output(
   amount: number,
   from: string,
@@ -43,23 +64,17 @@ export function calculate_output(
   return { rate, fee, estimatedAmount };
 }
 
-// ── Future integration placeholders ─────────────────────────────
-// Wire these to Fireblocks (custody/signing) and Circle (USDC settlement).
-export async function create_wallet(_userId: string): Promise<{ address: string }> {
-  throw new Error("create_wallet: not implemented (Fireblocks integration pending)");
-}
-
-export async function send_transaction(_args: {
-  fromUserId: string;
-  toCurrency: string;
-  amount: number;
-}): Promise<{ txId: string }> {
-  throw new Error("send_transaction: not implemented (Fireblocks/Circle integration pending)");
-}
-
-export async function get_wallet_balance(
-  _userId: string,
-  _currency: string,
-): Promise<number> {
-  throw new Error("get_wallet_balance: not implemented");
-}
+/**
+ * EXECUTION FLOW (Current Architecture):
+ * 1. /fx/quote → calculate rates (this file)
+ * 2. /fx/execute → Arc settlement (arc-settlement.server.ts)
+ * 3. /tx/:id → Poll Supabase (transaction-service.server.ts)
+ * 
+ * WALLET MANAGEMENT:
+ * - Frontend: Dynamic Labs handles user authentication + embedded wallet creation
+ * - Backend: Receives userId + walletAddress from Dynamic, uses for routing only
+ * - Arc testnet: Executes transactions with backend-controlled keys
+ * 
+ * NO Fireblocks integration in this stage.
+ * Future: Fireblocks can be added as optional backend custody layer.
+ */

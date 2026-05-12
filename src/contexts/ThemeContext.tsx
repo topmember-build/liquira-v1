@@ -34,9 +34,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyTheme(theme);
   }, [theme]);
 
-  // Hydrate from profile when user logs in
+  // Hydrate from profile when user logs in (Supabase optional)
   useEffect(() => {
     if (!user) return;
+    if (!supabase?.from) {
+      console.warn("[ThemeContext] Supabase not configured - using localStorage only");
+      return;
+    }
+    
     let cancelled = false;
     supabase
       .from("profiles")
@@ -50,6 +55,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
           setThemeState(v);
           window.localStorage.setItem(STORAGE_KEY, v);
         }
+      })
+      .catch((err) => {
+        console.warn("[ThemeContext] Failed to fetch theme from Supabase:", err);
       });
     return () => {
       cancelled = true;
@@ -59,8 +67,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = (t: Theme) => {
     setThemeState(t);
     if (typeof window !== "undefined") window.localStorage.setItem(STORAGE_KEY, t);
-    if (user) {
-      void supabase.from("profiles").update({ theme: t }).eq("id", user.id);
+    if (user && supabase?.from) {
+      void supabase.from("profiles").update({ theme: t }).eq("id", user.id).catch((err) => {
+        console.warn("[ThemeContext] Failed to update theme in Supabase:", err);
+      });
     }
   };
 
