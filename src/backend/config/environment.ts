@@ -14,13 +14,13 @@ const envSchema = z.object({
   PORT: z.string().transform(Number).default("3000"),
   HOST: z.string().default("localhost"),
 
-  // Database configuration
-  DATABASE_URL: z.string().url(),
-  DATABASE_HOST: z.string(),
-  DATABASE_PORT: z.string().transform(Number),
-  DATABASE_NAME: z.string(),
-  DATABASE_USER: z.string(),
-  DATABASE_PASSWORD: z.string(),
+  // Database configuration (optional - app works with in-memory fallback)
+  DATABASE_URL: z.string().url().optional(),
+  DATABASE_HOST: z.string().optional(),
+  DATABASE_PORT: z.string().transform(Number).optional(),
+  DATABASE_NAME: z.string().optional(),
+  DATABASE_USER: z.string().optional(),
+  DATABASE_PASSWORD: z.string().optional(),
 
   // Provider API keys
   LIFI_API_KEY: z.string().optional(),
@@ -38,9 +38,9 @@ const envSchema = z.object({
   // Frontend configuration (for CORS)
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
 
-  // ARC configuration
-  ARC_ADDRESS: z.string(), // ARC contract address
-  ARC_WEBHOOK_SECRET: z.string(), // Secret for validating webhooks
+  // ARC configuration (optional for local development)
+  ARC_ADDRESS: z.string().optional(),
+  ARC_WEBHOOK_SECRET: z.string().optional(),
 
   // Logging
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
@@ -73,7 +73,7 @@ export const CONFIGURATION = {
   isDevelopment: config.NODE_ENV === "development",
   isProduction: config.NODE_ENV === "production",
 
-  // Database
+  // Database (optional)
   DATABASE_URL: config.DATABASE_URL,
 
   // Providers
@@ -112,7 +112,7 @@ export const CONFIGURATION = {
   FRONTEND_URL: config.FRONTEND_URL,
   CORS_ORIGIN: config.FRONTEND_URL,
 
-  // ARC
+  // ARC (optional)
   ARC_ADDRESS: config.ARC_ADDRESS,
   ARC_WEBHOOK_SECRET: config.ARC_WEBHOOK_SECRET,
 
