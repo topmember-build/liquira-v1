@@ -76,6 +76,9 @@ export function createApp(): Express {
   // Webhook routes (POST /api/webhooks/execution)
   // app.use("/api/webhooks", webhookRoutes);
 
+  // AI Layer routes (POST /api/ai/*)
+  app.use("/api/ai", require("./routes/ai").default);
+
   // ============ ERROR HANDLING ============
 
   // 404 handler
