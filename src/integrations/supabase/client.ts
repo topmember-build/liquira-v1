@@ -21,9 +21,36 @@ function createSupabaseClient() {
       signOut: async () => ({ data: null, error: null }),
     };
 
-    return {
-      auth: fallbackAuth,
-    } as unknown as ReturnType<typeof createClient>;
+    const noopResponse = Promise.resolve({ data: null, error: null });
+    const noopFunction = () => noopResponse;
+    const handler: ProxyHandler<any> = {
+      get: (_, prop) => {
+        if (prop === Symbol.toPrimitive) return undefined;
+        if (prop === 'then') return undefined;
+        return new Proxy(noopFunction, handler);
+      },
+      apply: () => noopResponse,
+    };
+
+    const fallbackClient = new Proxy(
+      {
+        auth: fallbackAuth,
+        from: new Proxy(noopFunction, handler),
+        channel: new Proxy(noopFunction, handler),
+        rpc: new Proxy(noopFunction, handler),
+        storage: new Proxy(noopFunction, handler),
+      },
+      {
+        get: (target, prop) => {
+          if (prop in target) {
+            return Reflect.get(target, prop);
+          }
+          return new Proxy(noopFunction, handler);
+        },
+      }
+    );
+
+    return fallbackClient as unknown as ReturnType<typeof createClient>;
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {

@@ -15,13 +15,33 @@ function createSupabaseAdminClient() {
       ...(!SUPABASE_SERVICE_ROLE_KEY ? ['SUPABASE_SERVICE_ROLE_KEY'] : []),
     ];
     console.warn(`[Supabase Admin] Optional client not configured: ${missing.join(', ')}. Using in-memory storage fallback.`);
-    // Return a proxy that warns when methods are called
-    return new Proxy({} as ReturnType<typeof createClient>, {
-      get(_, prop) {
-        console.warn(`[Supabase Admin] Method called on unconfigured client: ${String(prop)}`);
-        return undefined;
+
+    const noopResponse = Promise.resolve({ data: null, error: null });
+    const noopFunction = () => noopResponse;
+    const handler: ProxyHandler<any> = {
+      get: (_, prop) => {
+        if (prop === Symbol.toPrimitive) return undefined;
+        if (prop === 'then') return undefined;
+        return new Proxy(noopFunction, handler);
       },
-    });
+      apply: () => noopResponse,
+    };
+
+    return new Proxy(
+      {
+        auth: new Proxy(noopFunction, handler),
+        from: new Proxy(noopFunction, handler),
+        rpc: new Proxy(noopFunction, handler),
+      } as unknown as ReturnType<typeof createClient>,
+      {
+        get: (target, prop) => {
+          if (prop in target) {
+            return Reflect.get(target, prop);
+          }
+          return new Proxy(noopFunction, handler);
+        },
+      }
+    );
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
