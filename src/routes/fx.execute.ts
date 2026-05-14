@@ -70,17 +70,20 @@ export const Route = createFileRoute("/fx/execute")({
 
           // 1. Check Circle treasury wallet balances (treasury health - NON-FATAL)
           const treasuryWalletId = process.env.CIRCLE_WALLET_ID;
-          if (!treasuryWalletId) {
-            throw new Error("Missing CIRCLE_WALLET_ID");
-          }
 
-          try {
-            const balances = await getCircleWalletBalances(treasuryWalletId);
-            console.log("[FX Execute] Circle treasury balances checked:", balances);
-          } catch (circleError) {
-            console.warn(
-              "[FX Execute] Circle balance check failed (non-fatal):",
-              circleError instanceof Error ? circleError.message : String(circleError)
+          if (process.env.CIRCLE_API_KEY && treasuryWalletId) {
+            try {
+              const balances = await getCircleWalletBalances(treasuryWalletId);
+              console.log("[FX Execute] Circle treasury balances checked:", balances);
+            } catch (circleError) {
+              console.warn(
+                "[FX Execute] Circle balance check failed (non-fatal):",
+                circleError instanceof Error ? circleError.message : String(circleError)
+              );
+            }
+          } else {
+            console.info(
+              "[FX Execute] Skipping Circle treasury health check because Circle is not fully configured."
             );
           }
 

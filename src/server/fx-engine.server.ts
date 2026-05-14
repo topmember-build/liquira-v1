@@ -11,6 +11,8 @@
  * - Backend receives userId + walletAddress from Dynamic, not wallet signing
  */
 
+import { getCircleStableFxQuote, isCircleStableFXEnabled } from "@/server/providers/circle";
+
 // Hard-coded rates relative to USD. Extend freely.
 const USD_RATES: Record<string, number> = {
   USD: 1,
@@ -58,7 +60,31 @@ export function calculate_output(
   from: string,
   to: string,
 ): { rate: number; fee: number; estimatedAmount: number } {
-  const rate = calculate_rate(from, to);
+  const source = from.trim().toUpperCase();
+  const destination = to.trim().toUpperCase();
+
+  if (isCircleStableFXEnabled()) {
+    try {
+      const circleQuote = getCircleStableFxQuote(source, destination, amount);
+      console.info("[FX Engine] Using Circle Stable FX quote", {
+        from: source,
+        to: destination,
+        rate: circleQuote.rate,
+      });
+      const estimatedAmount = (amount - circleQuote.fee) * circleQuote.rate;
+      return {
+        rate: circleQuote.rate,
+        fee: circleQuote.fee,
+        estimatedAmount,
+      };
+    } catch (error) {
+      console.warn("[FX Engine] Circle Stable FX quote unavailable, falling back to internal rates", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const rate = calculate_rate(source, destination);
   const fee = calculate_fee(amount);
   const estimatedAmount = (amount - fee) * rate;
   return { rate, fee, estimatedAmount };

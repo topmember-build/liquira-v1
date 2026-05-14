@@ -27,6 +27,14 @@ const envSchema = z.object({
   SOCKET_API_KEY: z.string().optional(),
   RELAY_API_KEY: z.string().optional(),
 
+  // Circle treasury / stable FX config
+  CIRCLE_API_KEY: z.string().optional(),
+  CIRCLE_WALLET_ID: z.string().optional(),
+  CIRCLE_DESTINATION_ADDRESS: z.string().optional(),
+  CIRCLE_ENTITY_SECRET: z.string().optional(),
+  CIRCLE_DESTINATION_BLOCKCHAIN: z.string().optional(),
+  CIRCLE_STABLE_FX_ENABLED: z.string().transform((v) => v === "true").default("false"),
+
   // Frontend configuration (for CORS)
   FRONTEND_URL: z.string().url().default("http://localhost:5173"),
 
@@ -88,6 +96,16 @@ export const CONFIGURATION = {
       baseUrl: "https://api.relayer.xyz/v1",
       timeout: 30000,
     },
+  },
+
+  // Circle
+  CIRCLE: {
+    apiKey: config.CIRCLE_API_KEY,
+    walletId: config.CIRCLE_WALLET_ID,
+    destinationAddress: config.CIRCLE_DESTINATION_ADDRESS,
+    entitySecret: config.CIRCLE_ENTITY_SECRET,
+    destinationBlockchain: config.CIRCLE_DESTINATION_BLOCKCHAIN,
+    stableFxEnabled: config.CIRCLE_STABLE_FX_ENABLED,
   },
 
   // Frontend

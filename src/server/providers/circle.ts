@@ -19,13 +19,27 @@
  */
 
 import { arcTestnet } from "../../lib/arc-testnet";
+import { CONFIGURATION } from "@/backend/config/environment";
 
-const CIRCLE_API_KEY = process.env.CIRCLE_API_KEY;
 const CIRCLE_API_BASE = "https://api.circle.com/v1/w3s";
+export const CIRCLE_STABLE_FX_ENABLED = CONFIGURATION.CIRCLE.stableFxEnabled;
 
-if (!CIRCLE_API_KEY) {
-  throw new Error("Missing Circle API key");
-}
+const CIRCLE_STABLE_FX_SUPPORTED_CURRENCIES = new Set([
+  "USD",
+  "USDC",
+  "EUR",
+  "EURC",
+  "GBP",
+  "GBPT",
+  "NGN",
+  "NGNX",
+  "JPY",
+  "JPYC",
+  "KRW1",
+  "MXNB",
+  "BRZ",
+  "AEDC",
+]);
 
 type CircleResponse = Record<string, unknown>;
 
@@ -35,6 +49,78 @@ function redactBody(body: Record<string, unknown>) {
     safeBody.entitySecretCiphertext = "***REDACTED***";
   }
   return safeBody;
+}
+
+function getCircleApiKey(): string {
+  const apiKey = CONFIGURATION.CIRCLE.apiKey;
+  if (!apiKey) {
+    throw new Error("Missing Circle API key");
+  }
+  return apiKey;
+}
+
+export function isCircleConfigured(): boolean {
+  return Boolean(CONFIGURATION.CIRCLE.apiKey);
+}
+
+export function isCircleStableFXEnabled(): boolean {
+  return CIRCLE_STABLE_FX_ENABLED;
+}
+
+function deriveStableFxMockRate(fromCurrency: string, toCurrency: string): number {
+  const from = fromCurrency.trim().toUpperCase();
+  const to = toCurrency.trim().toUpperCase();
+
+  if (from === to) return 1;
+
+  if (!CIRCLE_STABLE_FX_SUPPORTED_CURRENCIES.has(from) || !CIRCLE_STABLE_FX_SUPPORTED_CURRENCIES.has(to)) {
+    throw new Error(`Circle Stable FX does not support currency pair: ${from} -> ${to}`);
+  }
+
+  const parity: Record<string, number> = {
+    USD: 1,
+    USDC: 1,
+    EUR: 0.92,
+    EURC: 0.92,
+    GBP: 0.79,
+    GBPT: 0.79,
+    NGN: 1500,
+    NGNX: 1500,
+    JPY: 155,
+    JPYC: 155,
+    KRW1: 1380,
+    MXNB: 17.2,
+    BRZ: 5.1,
+    AEDC: 3.67,
+  };
+
+  const fromRate = parity[from];
+  const toRate = parity[to];
+
+  if (fromRate === undefined || toRate === undefined) {
+    throw new Error(`Unsupported stable FX currency for Circle mock: ${from} or ${to}`);
+  }
+
+  return toRate / fromRate;
+}
+
+export function getCircleStableFxQuote(
+  fromCurrency: string,
+  toCurrency: string,
+  amount: number
+): { rate: number; fee: number; provider: "circle" } {
+  if (!CIRCLE_STABLE_FX_ENABLED) {
+    throw new Error("Circle Stable FX is disabled");
+  }
+
+  const rate = deriveStableFxMockRate(fromCurrency, toCurrency);
+  const fee = Math.max(0, amount * 0.0002); // 2 bps fee estimate
+
+  return {
+    rate,
+    fee,
+    provider: "circle",
+  };
 }
 
 export function deriveCircleBlockchain(): string {
@@ -57,7 +143,7 @@ async function circleRequest(
   const requestInit: RequestInit = {
     method,
     headers: {
-      Authorization: `Bearer ${CIRCLE_API_KEY}`,
+      Authorization: `Bearer ${getCircleApiKey()}`,
       "Content-Type": "application/json",
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
