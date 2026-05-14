@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as PaymentRouteImport } from './routes/payment'
-import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
@@ -19,11 +18,11 @@ import { Route as AccountIndexRouteImport } from './routes/account.index'
 import { Route as TxTransactionIdRouteImport } from './routes/tx.$transactionId'
 import { Route as FxQuoteRouteImport } from './routes/fx.quote'
 import { Route as FxExecuteRouteImport } from './routes/fx.execute'
+import { Route as CircleStablefxRouteImport } from './routes/circle.stablefx'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as AccountWalletsRouteImport } from './routes/account.wallets'
 import { Route as AccountPreferencesRouteImport } from './routes/account.preferences'
 import { Route as AccountHistoryRouteImport } from './routes/account.history'
-import { Route as McpToolsToolNameRouteImport } from './routes/mcp.tools.$toolName'
 
 const StatsRoute = StatsRouteImport.update({
   id: '/stats',
@@ -33,11 +32,6 @@ const StatsRoute = StatsRouteImport.update({
 const PaymentRoute = PaymentRouteImport.update({
   id: '/payment',
   path: '/payment',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -75,6 +69,11 @@ const FxExecuteRoute = FxExecuteRouteImport.update({
   path: '/fx/execute',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CircleStablefxRoute = CircleStablefxRouteImport.update({
+  id: '/circle/stablefx',
+  path: '/circle/stablefx',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
@@ -95,62 +94,54 @@ const AccountHistoryRoute = AccountHistoryRouteImport.update({
   path: '/history',
   getParentRoute: () => AccountRoute,
 } as any)
-const McpToolsToolNameRoute = McpToolsToolNameRouteImport.update({
-  id: '/tools/$toolName',
-  path: '/tools/$toolName',
-  getParentRoute: () => McpRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRouteWithChildren
   '/login': typeof LoginRoute
-  '/mcp': typeof McpRouteWithChildren
   '/payment': typeof PaymentRoute
   '/stats': typeof StatsRoute
   '/account/history': typeof AccountHistoryRoute
   '/account/preferences': typeof AccountPreferencesRoute
   '/account/wallets': typeof AccountWalletsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/circle/stablefx': typeof CircleStablefxRoute
   '/fx/execute': typeof FxExecuteRoute
   '/fx/quote': typeof FxQuoteRoute
   '/tx/$transactionId': typeof TxTransactionIdRoute
   '/account/': typeof AccountIndexRoute
-  '/mcp/tools/$toolName': typeof McpToolsToolNameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/mcp': typeof McpRouteWithChildren
   '/payment': typeof PaymentRoute
   '/stats': typeof StatsRoute
   '/account/history': typeof AccountHistoryRoute
   '/account/preferences': typeof AccountPreferencesRoute
   '/account/wallets': typeof AccountWalletsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/circle/stablefx': typeof CircleStablefxRoute
   '/fx/execute': typeof FxExecuteRoute
   '/fx/quote': typeof FxQuoteRoute
   '/tx/$transactionId': typeof TxTransactionIdRoute
   '/account': typeof AccountIndexRoute
-  '/mcp/tools/$toolName': typeof McpToolsToolNameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRouteWithChildren
   '/login': typeof LoginRoute
-  '/mcp': typeof McpRouteWithChildren
   '/payment': typeof PaymentRoute
   '/stats': typeof StatsRoute
   '/account/history': typeof AccountHistoryRoute
   '/account/preferences': typeof AccountPreferencesRoute
   '/account/wallets': typeof AccountWalletsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/circle/stablefx': typeof CircleStablefxRoute
   '/fx/execute': typeof FxExecuteRoute
   '/fx/quote': typeof FxQuoteRoute
   '/tx/$transactionId': typeof TxTransactionIdRoute
   '/account/': typeof AccountIndexRoute
-  '/mcp/tools/$toolName': typeof McpToolsToolNameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -158,61 +149,58 @@ export interface FileRouteTypes {
     | '/'
     | '/account'
     | '/login'
-    | '/mcp'
     | '/payment'
     | '/stats'
     | '/account/history'
     | '/account/preferences'
     | '/account/wallets'
     | '/auth/callback'
+    | '/circle/stablefx'
     | '/fx/execute'
     | '/fx/quote'
     | '/tx/$transactionId'
     | '/account/'
-    | '/mcp/tools/$toolName'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
-    | '/mcp'
     | '/payment'
     | '/stats'
     | '/account/history'
     | '/account/preferences'
     | '/account/wallets'
     | '/auth/callback'
+    | '/circle/stablefx'
     | '/fx/execute'
     | '/fx/quote'
     | '/tx/$transactionId'
     | '/account'
-    | '/mcp/tools/$toolName'
   id:
     | '__root__'
     | '/'
     | '/account'
     | '/login'
-    | '/mcp'
     | '/payment'
     | '/stats'
     | '/account/history'
     | '/account/preferences'
     | '/account/wallets'
     | '/auth/callback'
+    | '/circle/stablefx'
     | '/fx/execute'
     | '/fx/quote'
     | '/tx/$transactionId'
     | '/account/'
-    | '/mcp/tools/$toolName'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRouteWithChildren
   LoginRoute: typeof LoginRoute
-  McpRoute: typeof McpRouteWithChildren
   PaymentRoute: typeof PaymentRoute
   StatsRoute: typeof StatsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  CircleStablefxRoute: typeof CircleStablefxRoute
   FxExecuteRoute: typeof FxExecuteRoute
   FxQuoteRoute: typeof FxQuoteRoute
   TxTransactionIdRoute: typeof TxTransactionIdRoute
@@ -232,13 +220,6 @@ declare module '@tanstack/react-router' {
       path: '/payment'
       fullPath: '/payment'
       preLoaderRoute: typeof PaymentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -290,6 +271,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FxExecuteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/circle/stablefx': {
+      id: '/circle/stablefx'
+      path: '/circle/stablefx'
+      fullPath: '/circle/stablefx'
+      preLoaderRoute: typeof CircleStablefxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/auth/callback'
@@ -318,13 +306,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccountHistoryRouteImport
       parentRoute: typeof AccountRoute
     }
-    '/mcp/tools/$toolName': {
-      id: '/mcp/tools/$toolName'
-      path: '/tools/$toolName'
-      fullPath: '/mcp/tools/$toolName'
-      preLoaderRoute: typeof McpToolsToolNameRouteImport
-      parentRoute: typeof McpRoute
-    }
   }
 }
 
@@ -345,24 +326,14 @@ const AccountRouteChildren: AccountRouteChildren = {
 const AccountRouteWithChildren =
   AccountRoute._addFileChildren(AccountRouteChildren)
 
-interface McpRouteChildren {
-  McpToolsToolNameRoute: typeof McpToolsToolNameRoute
-}
-
-const McpRouteChildren: McpRouteChildren = {
-  McpToolsToolNameRoute: McpToolsToolNameRoute,
-}
-
-const McpRouteWithChildren = McpRoute._addFileChildren(McpRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRouteWithChildren,
   LoginRoute: LoginRoute,
-  McpRoute: McpRouteWithChildren,
   PaymentRoute: PaymentRoute,
   StatsRoute: StatsRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  CircleStablefxRoute: CircleStablefxRoute,
   FxExecuteRoute: FxExecuteRoute,
   FxQuoteRoute: FxQuoteRoute,
   TxTransactionIdRoute: TxTransactionIdRoute,

@@ -25,7 +25,7 @@ dist-ssr
 .env.local
 .env.production
 .env.development
-.env.example
+# .env.example - Keep in Git to show required env vars
 
 # Test files with API keys
 test-public-key.js
