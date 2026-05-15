@@ -88,10 +88,6 @@ export const validatePaymentForm = (data: {
     errors.destinationChain = "Destination chain is required";
   }
 
-  if (data.sourceChain === data.destinationChain) {
-    errors.destinationChain = "Destination chain must be different from source chain";
-  }
-
   if (!data.sourceToken) {
     errors.sourceToken = "Source token is required";
   }

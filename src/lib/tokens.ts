@@ -46,6 +46,7 @@ const TOKEN_ADDRESSES: Record<string, Record<string, string>> = {
   },
   "arc-testnet": {
     "USDC": "0x3600000000000000000000000000000000000000",
+    "EURC": "0x3600000000000000000000000000000000000001",
   },
 };
 

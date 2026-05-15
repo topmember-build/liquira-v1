@@ -26,6 +26,9 @@ export function RouterSection() {
             depth-aware impact, animated route trace: quote, simulate, and
             execute in one panel.
           </p>
+          <p className="max-w-md text-sm leading-relaxed text-muted-foreground mt-4">
+            Arc testnet only for v1. Send or demo USDC ↔ EURC payments while stable FX API keys are pending.
+          </p>
         </div>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1fr),minmax(0,1.1fr)]">
@@ -84,8 +87,8 @@ function SwapPanel() {
       destinationToken: toCurrency,
       amount: amount,
       recipientAddress: recipientAddress,
-      sourceChain: "ethereum", // Default chain
-      destinationChain: "ethereum", // Default chain
+      sourceChain: "arc-testnet",
+      destinationChain: "arc-testnet",
     } : null
   );
 
@@ -179,8 +182,8 @@ function SwapPanel() {
         destinationToken: toCurrency,
         amount: amount,
         recipientAddress: recipientAddress,
-        sourceChain: "ethereum",
-        destinationChain: "ethereum",
+        sourceChain: "arc-testnet",
+        destinationChain: "arc-testnet",
       });
 
       // Navigate to payment interface
@@ -269,7 +272,11 @@ const minReceived = estOut * (1 - slippageBps / 10_000);
             inputMode="decimal"
             className="w-full bg-transparent font-mono text-3xl text-foreground outline-none tabular-nums"
           />
-          <CurrencySelect value={fromCurrency} onChange={setFromCurrency} />
+          <CurrencySelect
+            value={fromCurrency}
+            onChange={setFromCurrency}
+            options={isPaymentMode ? ["USDC", "EURC"] : STABLES.map((s) => s.symbol)}
+          />
         </div>
         <div className="mt-2 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
           <span>1 {fromCurrency} = {rate ? rate.toFixed(6) : "—"} {toCurrency}</span>
@@ -332,7 +339,11 @@ const minReceived = estOut * (1 - slippageBps / 10_000);
           <div key={pulseKey} className="font-mono text-3xl text-foreground tabular-nums animate-quote-in">
             {estOut.toLocaleString(undefined, { maximumFractionDigits: 4 })}
           </div>
-          <CurrencySelect value={toCurrency} onChange={setToCurrency} />
+          <CurrencySelect
+            value={toCurrency}
+            onChange={setToCurrency}
+            options={isPaymentMode ? ["USDC", "EURC"] : STABLES.map((s) => s.symbol)}
+          />
         </div>
         <div className="mt-2 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
           <span>≈ {formatUsd(estOut, { decimals: 2 })}</span>
@@ -499,16 +510,24 @@ function StatusDot({ status }: { status: TxStatus | "idle" }) {
   );
 }
 
-function CurrencySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function CurrencySelect({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+}) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className="flex items-center gap-2 border border-border bg-surface-2 px-3 py-2 font-mono text-sm outline-none focus:border-primary"
     >
-      {STABLES.map((s) => (
-        <option key={s.symbol} value={s.symbol}>
-          {s.symbol}
+      {options.map((symbol) => (
+        <option key={symbol} value={symbol}>
+          {symbol}
         </option>
       ))}
     </select>

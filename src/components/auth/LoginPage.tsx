@@ -1,13 +1,23 @@
-import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useState, useEffect, type FormEvent } from "react";
 import { toast } from "sonner";
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Header } from "@/components/site/Header";
 
 export function LoginPage() {
-  const search = useSearch({ redirect: "/account" });
+  const redirect =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("redirect") ?? "/account"
+      : "/account";
   const navigate = useNavigate();
+  const {
+    user: dynamicUser,
+    primaryWallet,
+    sdkHasLoaded,
+    setShowAuthFlow,
+  } = useDynamicContext();
   const hasSupabaseAuth = typeof supabase.auth?.signInWithPassword === "function";
   const hasSupabaseSignup = typeof supabase.auth?.signUp === "function";
   const hasSupabaseOAuth = typeof supabase.auth?.signInWithOAuth === "function";
@@ -15,6 +25,17 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (dynamicUser && primaryWallet) {
+      navigate({ to: redirect });
+    }
+  }, [dynamicUser, primaryWallet, navigate, redirect]);
+
+  const handleDynamicSignIn = () => {
+    if (!sdkHasLoaded || !setShowAuthFlow) return;
+    setShowAuthFlow(true);
+  };
 
   const handleGoogleSignIn = async () => {
     setBusy(true);
@@ -26,7 +47,7 @@ export function LoginPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(search.redirect)}`,
+          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
         },
       });
       
@@ -56,7 +77,7 @@ export function LoginPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back");
-        navigate({ to: search.redirect });
+        navigate({ to: redirect });
       } else {
         const { error } = await supabase.auth.signUp({
           email,
@@ -89,7 +110,18 @@ export function LoginPage() {
             </p>
           </div>
 
-          {/* Google OAuth Button */}
+          <button
+            type="button"
+            onClick={handleDynamicSignIn}
+            disabled={busy || !sdkHasLoaded}
+            className="w-full rounded-md border border-border bg-surface-1 px-4 py-2 font-medium text-foreground hover:bg-surface-2 focus:outline-none disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <span>Create or connect a Dynamic Wallet</span>
+          </button>
+          <p className="mt-2 text-center text-sm text-muted-foreground">
+            Embedded Dynamic wallet creation is available directly in Liquira; WalletConnect is not required.
+          </p>
+
           <button
             type="button"
             onClick={handleGoogleSignIn}

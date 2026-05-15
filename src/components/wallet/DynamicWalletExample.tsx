@@ -9,7 +9,7 @@ import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { useEffect, useState } from "react";
 
 export function DynamicWalletExample() {
-  const { user, primaryWallet, isLoading, handleLogOut } = useDynamicContext();
+  const { user, primaryWallet, sdkHasLoaded, handleLogOut } = useDynamicContext();
   const [copied, setCopied] = useState(false);
 
   const handleCopyAddress = () => {
@@ -20,7 +20,7 @@ export function DynamicWalletExample() {
     }
   };
 
-  if (isLoading) {
+  if (!sdkHasLoaded) {
     return <div className="text-muted-foreground">Loading wallet...</div>;
   }
 

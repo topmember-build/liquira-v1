@@ -51,10 +51,10 @@ export interface PaymentContextType {
 }
 
 const defaultFormData: PaymentFormData = {
-  sourceChain: "",
-  destinationChain: "",
-  sourceToken: "",
-  destinationToken: "",
+  sourceChain: "arc-testnet",
+  destinationChain: "arc-testnet",
+  sourceToken: "USDC",
+  destinationToken: "EURC",
   amount: "",
   recipientAddress: "",
   strategy: "lowest-fee",
