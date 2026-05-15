@@ -7,14 +7,15 @@ import { CHAINS } from "@/lib/stables";
 import { NotificationBell } from "./NotificationBell";
 import { useDisplayCurrency, type DisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { Logo } from "./Logo";
 
 export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-6">
         <Link to="/" className="flex items-center gap-3">
-          <div className="grid h-9 w-9 place-items-center rounded-md border border-primary/40 bg-primary/10">
-            <span className="font-mono text-sm font-bold text-primary">L</span>
+          <div className="grid h-10 w-10 place-items-center rounded-2xl border border-primary/40 bg-primary/10">
+            <Logo className="h-7 w-7 text-primary" />
           </div>
           <div className="leading-tight">
             <div className="font-mono text-sm font-semibold">
@@ -72,18 +73,18 @@ function CurrencySwitcher() {
   const { currency, setCurrency } = useDisplayCurrency();
   const options: DisplayCurrency[] = ["USD", "NGN", "EUR", "GBP"];
   return (
-    <div className="hidden items-center border border-border md:flex" title="Display currency">
-      {options.map((c) => (
-        <button
-          key={c}
-          onClick={() => setCurrency(c)}
-          className={`px-2 py-1 font-mono text-[10px] uppercase tracking-widest transition-colors ${
-            currency === c ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {c === "NGN" ? "₦ NGN" : c}
-        </button>
-      ))}
+    <div className="hidden md:block" title="Display currency">
+      <select
+        value={currency}
+        onChange={(e) => setCurrency(e.target.value as DisplayCurrency)}
+        className="border border-border bg-background px-2 py-1 font-mono text-[10px] uppercase tracking-widest text-foreground focus:border-primary focus:outline-none"
+      >
+        {options.map((c) => (
+          <option key={c} value={c}>
+            {c === "NGN" ? "₦ NGN" : c}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
