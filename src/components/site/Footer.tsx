@@ -1,3 +1,5 @@
+import { Logo } from "./Logo";
+
 export function Footer() {
   return (
     <footer className="border-t border-border bg-background">
@@ -5,9 +7,7 @@ export function Footer() {
         <div className="grid gap-10 md:grid-cols-[1.4fr,1fr,1fr,1fr]">
           <div>
             <div className="flex items-center gap-3">
-              <div className="grid h-9 w-9 place-items-center rounded-md border border-primary/40 bg-primary/10">
-                <span className="font-mono text-sm font-bold text-primary">L</span>
-              </div>
+              <Logo className="w-10 h-auto object-contain" />
               <div className="leading-tight">
                 <div className="font-mono text-sm font-semibold">
                   liquira<span className="text-primary">/fx</span>

@@ -14,9 +14,7 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between px-6">
         <Link to="/" className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-2xl border border-primary/40 bg-primary/10">
-            <Logo className="h-7 w-7 text-primary" />
-          </div>
+          <Logo className="w-10 h-auto object-contain" />
           <div className="leading-tight">
             <div className="font-mono text-sm font-semibold">
               liquira<span className="text-primary">/fx</span>
