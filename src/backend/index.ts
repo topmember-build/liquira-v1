@@ -6,10 +6,17 @@
  */
 
 import express, { Express, Request, Response, NextFunction } from "express";
+import path from "path";
+import fs from "fs";
+import { pathToFileURL } from "url";
 import cors from "cors";
+const moduleAlias = require("module-alias");
 import { CONFIGURATION } from "./config/environment";
 import { logger } from "./utils/logger";
 import { formatErrorResponse } from "./utils/errors";
+
+const distRoot = path.resolve(process.cwd(), "dist");
+moduleAlias.addAlias("@", distRoot);
 
 // Import route handlers (will be created next)
 // import quoteRoutes from "./routes/quote.routes";
@@ -21,7 +28,7 @@ import { formatErrorResponse } from "./utils/errors";
 /**
  * Initialize Express app
  */
-export function createApp(): Express {
+export async function createApp(): Promise<Express> {
   const app = express();
 
   // ============ MIDDLEWARE ============
@@ -65,7 +72,22 @@ export function createApp(): Express {
   });
 
   // Quote routes (POST /api/quote)
-  // app.use("/api/quote", quoteRoutes);
+  try {
+    // Mount API routers if present
+    // Importing here avoids startup errors when files are missing in some environments
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const quoteRoutes = require("./routes/quote.routes").default;
+    const executeRoutes = require("./routes/execute.routes").default;
+    const transactionRoutes = require("./routes/transaction.routes").default;
+    const webhookRoutes = require("./routes/webhook.routes").default;
+
+    app.use("/api/quote", quoteRoutes);
+    app.use("/api/execute", executeRoutes);
+    app.use("/api/transaction", transactionRoutes);
+    app.use("/api/webhooks", webhookRoutes);
+  } catch (err) {
+    logger.warn("Backend routes not mounted (some route files may be missing)", { error: err instanceof Error ? err.message : String(err) });
+  }
 
   // Execute routes (POST /api/execute)
   // app.use("/api/execute", executeRoutes);
@@ -77,7 +99,84 @@ export function createApp(): Express {
   // app.use("/api/webhooks", webhookRoutes);
 
   // AI Layer routes (POST /api/ai/*)
-  app.use("/api/ai", require("./routes/ai").default);
+  try {
+    app.use("/api/ai", require("./routes/ai").default);
+  } catch (err) {
+    logger.warn("AI routes not mounted (ai route missing)", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  // React Start server functions proxy route
+  const serverEntryPath = path.join(process.cwd(), "dist", "server", "index.js");
+  if (fs.existsSync(serverEntryPath)) {
+    try {
+      const importModule = new Function("path", "return import(path);") as (path: string) => Promise<any>;
+      const serverEntryModule = await importModule(pathToFileURL(serverEntryPath).href);
+      const serverEntry = serverEntryModule.default ?? serverEntryModule;
+      const fetchHandler = typeof serverEntry.fetch === "function" ? serverEntry.fetch : undefined;
+
+      if (typeof fetchHandler === "function") {
+        app.all(/^\/_serverFn\/.*$/, async (req: Request, res: Response, next: NextFunction) => {
+          try {
+            const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+            const headers = new Headers();
+            for (const [key, value] of Object.entries(req.headers)) {
+              if (typeof value === "undefined") continue;
+              if (Array.isArray(value)) {
+                headers.set(key, value.join(","));
+              } else {
+                headers.set(key, value);
+              }
+            }
+
+            const body = req.method === "GET" || req.method === "HEAD" ? undefined : typeof req.body === "string" ? req.body : JSON.stringify(req.body ?? {});
+            const request = new Request(url, {
+              method: req.method,
+              headers,
+              body,
+            });
+
+            const response = await fetchHandler(request);
+            res.status(response.status);
+            response.headers.forEach((value: string, key: string) => res.setHeader(key, value));
+            const responseBody = await response.arrayBuffer();
+            if (responseBody.byteLength > 0) {
+              res.send(Buffer.from(responseBody));
+            } else {
+              res.end();
+            }
+          } catch (err) {
+            next(err);
+          }
+        });
+      } else {
+        logger.warn("React Start server entry is missing a fetch handler", { serverEntryPath });
+      }
+    } catch (err) {
+      logger.warn("Failed to mount React Start server functions", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  } else {
+    logger.info("React Start server entry not found; skipping /_serverFn proxy", { serverEntryPath });
+  }
+
+  // Serve built frontend (if present) so backend can be the single deployable unit
+  const distPath = path.join(process.cwd(), "dist");
+  if (fs.existsSync(distPath)) {
+    app.use(express.static(distPath));
+
+    // SPA fallback: serve index.html for non-API GETs
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.method !== "GET" || req.path.startsWith("/api/")) return next();
+      const indexHtml = path.join(distPath, "index.html");
+      if (fs.existsSync(indexHtml)) return res.sendFile(indexHtml);
+      return next();
+    });
+  } else {
+    logger.info("Frontend dist directory not found; skipping static file serving", { distPath });
+  }
 
   // ============ ERROR HANDLING ============
 
@@ -110,7 +209,7 @@ export function createApp(): Express {
  * Start the server
  */
 export async function startServer(): Promise<void> {
-  const app = createApp();
+  const app = await createApp();
 
   app.listen(CONFIGURATION.PORT, CONFIGURATION.HOST, () => {
     logger.info(`Server started`, {
@@ -120,8 +219,8 @@ export async function startServer(): Promise<void> {
   });
 }
 
-// Run if this is the main module
-if (import.meta.url === `file://${process.argv[1]}`) {
+// Run if this is the main module (CommonJS-compatible)
+if (require.main === module) {
   startServer().catch((err) => {
     logger.error("Failed to start server", { error: err.message });
     process.exit(1);

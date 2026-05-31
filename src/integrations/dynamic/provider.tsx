@@ -6,8 +6,10 @@
 import { DynamicContextProvider } from "@dynamic-labs/sdk-react-core";
 import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
 // import { ViemExtension } from "@dynamic-labs/viem-extension";
+import type { EvmNetwork, GenericNetwork } from "@dynamic-labs/types";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { arcTestnet } from "@/lib/arc-testnet";
 
 interface DynamicProviderProps {
   children: ReactNode;
@@ -28,6 +30,29 @@ export function DynamicProvider({ children }: DynamicProviderProps) {
   const environmentId =
     metaVite ?? metaPlain ?? (typeof process !== "undefined" ? (process.env as any).VITE_DYNAMIC_ENVIRONMENT_ID ?? (process.env as any).DYNAMIC_ENVIRONMENT_ID : undefined);
 
+  const arcTestnetNetwork: EvmNetwork = {
+    key: "arc-testnet",
+    name: "Arc Testnet",
+    chainId: arcTestnet.id,
+    networkId: arcTestnet.id,
+    nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
+    rpcUrls: ["https://rpc.testnet.arc.network"],
+    blockExplorerUrls: ["https://testnet.arcscan.app"],
+    iconUrls: ["https://testnet.arcscan.app/favicon.ico"],
+    isTestnet: true,
+    hasNativeToken: true,
+    supportsFeeTokenSelection: true,
+  };
+
+  const arcNetworkOverrides = useMemo(
+    () =>
+      (dashboardNetworks: GenericNetwork[]) => {
+        const found = dashboardNetworks.some((network) => Number(network.networkId) === arcTestnet.id);
+        return found ? dashboardNetworks : [...dashboardNetworks, arcTestnetNetwork];
+      },
+    []
+  );
+
   if (!environmentId) {
     console.warn(
       "Missing Dynamic environment variable. Dynamic Labs wallet support will be disabled. " +
@@ -46,8 +71,13 @@ export function DynamicProvider({ children }: DynamicProviderProps) {
       <DynamicContextProvider
         settings={{
           environmentId,
+          flowNetwork: "testnet",
           walletConnectors: [EthereumWalletConnectors],
+          walletConnectPreferredChains: [`eip155:${arcTestnet.id}`],
           // extensions: [new ViemExtension()],
+          overrides: {
+            evmNetworks: arcNetworkOverrides,
+          },
         }}
       >
         {children}

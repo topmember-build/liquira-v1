@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { LogOut, User as UserIcon, Wallet as WalletIcon, Sun, Moon, Menu, X } from "lucide-react";
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { CHAINS } from "@/lib/stables";
@@ -135,6 +136,13 @@ function ThemeToggle() {
 function CurrencySwitcher({ className = "" }: { className?: string }) {
   const { currency, setCurrency } = useDisplayCurrency();
   const options: DisplayCurrency[] = ["USD", "NGN", "EUR", "GBP"];
+  const currencySymbols: Record<DisplayCurrency, string> = {
+    USD: "$",
+    NGN: "₦",
+    EUR: "€",
+    GBP: "£",
+  };
+
   return (
     <div className={cn("hidden md:block", className)} title="Display currency">
       <select
@@ -144,7 +152,7 @@ function CurrencySwitcher({ className = "" }: { className?: string }) {
       >
         {options.map((c) => (
           <option key={c} value={c}>
-            {c === "NGN" ? "₦ NGN" : c}
+            {currencySymbols[c]} {c}
           </option>
         ))}
       </select>
@@ -229,7 +237,51 @@ function AuthButton() {
 }
 
 function WalletButton() {
+  // Top-level hooks must remain stable between server and client.
   const w = useWallet();
+  const [isClient, setIsClient] = useState(false);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, []);
+
+  // Render a minimal, non-Dynamic-dependent UI during SSR/hydration.
+  if (!isClient) {
+    return (
+      <div ref={ref} className="relative">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          disabled={w.isConnecting}
+          className="bg-primary px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-widest text-primary-foreground hover:opacity-90 disabled:opacity-50"
+        >
+          {w.isConnecting ? "Connecting…" : w.connected ? `${w.address?.slice(0, 6)}…${w.address?.slice(-4)}` : "Connect"}
+        </button>
+      </div>
+    );
+  }
+
+  // Client-only component that can safely use Dynamic hooks.
+  return <ClientWalletMenu />;
+}
+
+function ClientWalletMenu() {
+  const w = useWallet();
+  const dynamicContext = useDynamicContext();
+  const dynamicWallet = dynamicContext?.primaryWallet;
+  const setShowAuthFlow = dynamicContext?.setShowAuthFlow;
+  const sdkHasLoaded = dynamicContext?.sdkHasLoaded;
+  const dynamicDisconnect = dynamicContext?.handleLogOut;
+
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -241,7 +293,18 @@ function WalletButton() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  if (!w.connected) {
+  const handleDynamicDisconnect = async () => {
+    setOpen(false);
+    try {
+      if (typeof dynamicDisconnect === "function") {
+        await dynamicDisconnect?.();
+      }
+    } catch (error) {
+      console.error("Error disconnecting Dynamic wallet:", error);
+    }
+  };
+
+  if (!w.connected && !dynamicWallet?.address) {
     return (
       <div ref={ref} className="relative">
         <button
@@ -273,6 +336,19 @@ function WalletButton() {
             >
               <WalletIcon size={12} /> WalletConnect v2
             </button>
+            <button
+              onClick={() => {
+                setOpen(false);
+                if (sdkHasLoaded && setShowAuthFlow) {
+                  setShowAuthFlow(true);
+                }
+              }}
+              disabled={!sdkHasLoaded || !setShowAuthFlow}
+              title={!sdkHasLoaded ? "Dynamic SDK loading..." : "Create or connect Dynamic wallet"}
+              className="flex w-full items-center gap-2 rounded px-3 py-2 font-mono text-[11px] text-foreground hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <WalletIcon size={12} /> Dynamic Wallet
+            </button>
           </div>
         )}
       </div>
@@ -286,70 +362,135 @@ function WalletButton() {
         className="flex items-center gap-2 border border-primary/40 bg-primary/10 px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-primary hover:bg-primary/20"
       >
         <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-primary" />
-        {w.address!.slice(0, 6)}…{w.address!.slice(-4)}
+        {w.connected && w.address
+          ? `${w.address.slice(0, 6)}…${w.address.slice(-4)}`
+          : dynamicWallet?.address
+          ? `${dynamicWallet.address.slice(0, 6)}…${dynamicWallet.address.slice(-4)}`
+          : "Wallet"}
       </button>
       {open && (
         <div className="absolute right-0 mt-2 w-64 rounded-md border border-border bg-surface-1 p-3 shadow-xl">
-          <div className="text-mono-label" style={{ fontSize: 9 }}>
-            CONNECTED · {w.kind}
-          </div>
-          <div className="mt-1 break-all font-mono text-[11px] text-foreground">{w.address}</div>
-          <div className="mt-2">
-            <div className="flex items-center justify-between font-mono text-[11px]">
-              <span className="text-muted-foreground">Native</span>
-              <span className="text-foreground font-mono">{w.nativeBalance ?? "-"}</span>
-            </div>
-            <div className="mt-2 space-y-1 text-[11px]">
-              <div className="flex justify-between items-center">
-                <span className="flex items-center gap-2">
-                  <TokenIcon symbol="USDC" size={16} />
-                  <span className="text-muted-foreground">USDC</span>
-                </span>
-                <span className="text-foreground font-mono">{(w.balances.USDC ?? 0).toFixed(4)}</span>
+          {w.connected && w.address ? (
+            <>
+              <div className="text-mono-label" style={{ fontSize: 9 }}>
+                CONNECTED · {w.kind}
               </div>
-              <div className="flex justify-between items-center">
-                <span className="flex items-center gap-2">
-                  <TokenIcon symbol="EURC" size={16} />
-                  <span className="text-muted-foreground">EURC</span>
-                </span>
-                <span className="text-foreground font-mono">{(w.balances.EURC ?? 0).toFixed(4)}</span>
+              <div className="mt-1 break-all font-mono text-[11px] text-foreground">{w.address}</div>
+              <div className="mt-2">
+                <div className="flex items-center justify-between font-mono text-[11px]">
+                  <span className="text-muted-foreground">Native</span>
+                  <span className="text-foreground font-mono">{w.nativeBalance ?? "-"}</span>
+                </div>
+                <div className="mt-2 space-y-1 text-[11px]">
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-2">
+                      <TokenIcon symbol="USDC" size={16} />
+                      <span className="text-muted-foreground">USDC</span>
+                    </span>
+                    <span className="text-foreground font-mono">{(w.balances.USDC ?? 0).toFixed(4)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-2">
+                      <TokenIcon symbol="EURC" size={16} />
+                      <span className="text-muted-foreground">EURC</span>
+                    </span>
+                    <span className="text-foreground font-mono">{(w.balances.EURC ?? 0).toFixed(4)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="flex items-center gap-2">
+                      <TokenIcon symbol="cirBTC" size={16} />
+                      <span className="text-muted-foreground">cirBTC</span>
+                    </span>
+                    <span className="text-foreground font-mono">{(w.balances.cirBTC ?? 0).toFixed(8)}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="flex items-center gap-2">
-                  <TokenIcon symbol="cirBTC" size={16} />
-                  <span className="text-muted-foreground">cirBTC</span>
-                </span>
-                <span className="text-foreground font-mono">{(w.balances.cirBTC ?? 0).toFixed(8)}</span>
-              </div>
-            </div>
-          </div>
 
-          <div className="mt-3 text-mono-label" style={{ fontSize: 9 }}>
-            NETWORK
-          </div>
-          <div className="mt-1 relative">
-            <select
-              value={w.chainId}
-              onChange={(e) => void w.switchChain(e.target.value)}
-              className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 font-mono text-[11px] outline-none focus:border-primary"
-            >
-              {CHAINS.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
+              <div className="mt-3 text-mono-label" style={{ fontSize: 9 }}>
+                NETWORK
+              </div>
+              <div className="mt-1 relative">
+                <select
+                  value={w.chainId}
+                  onChange={(e) => void w.switchChain(e.target.value)}
+                  className="mt-1 w-full rounded border border-border bg-background px-2 py-1.5 font-mono text-[11px] outline-none focus:border-primary"
+                >
+                  {CHAINS.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-          <button
-            onClick={() => {
-              setOpen(false);
-              w.disconnect();
-            }}
-            className="mt-3 w-full border border-border px-2 py-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:bg-surface-2 hover:text-foreground"
-          >
-            Disconnect
-          </button>
+              <button
+                onClick={() => {
+                  setOpen(false);
+                  w.disconnect();
+                }}
+                className="mt-3 w-full border border-border px-2 py-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+              >
+                Disconnect
+              </button>
+            </>
+          ) : dynamicWallet?.address ? (
+            <>
+              <div className="text-mono-label" style={{ fontSize: 9 }}>
+                CONNECTED · DYNAMIC
+              </div>
+              <div className="mt-1 break-all font-mono text-[11px] text-foreground">{dynamicWallet.address}</div>
+              
+              <div className="mt-3 text-mono-label" style={{ fontSize: 9 }}>
+                NETWORK
+              </div>
+              <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+                Arc Testnet
+              </div>
+
+              <div className="mt-3">
+                <Link
+                  to="/account/wallets"
+                  onClick={() => setOpen(false)}
+                  className="block w-full border border-border px-2 py-1.5 font-mono text-[11px] uppercase tracking-widest text-foreground hover:bg-surface-2 text-center"
+                >
+                  Manage Wallets
+                </Link>
+              </div>
+
+              <div className="mt-2 space-y-1.5">
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    void w.connect("injected");
+                  }}
+                  className="w-full border border-border px-2 py-1.5 font-mono text-[11px] uppercase tracking-widest text-foreground hover:bg-surface-2"
+                >
+                  Use Browser Wallet
+                </button>
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    void w.connect("walletconnect");
+                  }}
+                  disabled={!w.hasWalletConnect}
+                  className="w-full border border-border px-2 py-1.5 font-mono text-[11px] uppercase tracking-widest text-foreground hover:bg-surface-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Use WalletConnect
+                </button>
+              </div>
+
+              <button
+                onClick={handleDynamicDisconnect}
+                className="mt-3 w-full border border-border px-2 py-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:bg-surface-2 hover:text-foreground"
+              >
+                Disconnect Dynamic Wallet
+              </button>
+            </>
+          ) : (
+            <div className="text-mono-label text-muted-foreground" style={{ fontSize: 9 }}>
+              No wallet connected
+            </div>
+          )}
         </div>
       )}
     </div>

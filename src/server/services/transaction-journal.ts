@@ -1,4 +1,6 @@
+import { Json } from "@/integrations/supabase/types";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { logger } from "@/backend/utils/logger";
 import {
   create_transaction,
   get_transaction,
@@ -28,12 +30,12 @@ async function resolveUserIdForWallet(address: string): Promise<string | undefin
     .maybeSingle();
 
   if (error) {
-    console.warn("[Transaction Journal] Failed to resolve wallet owner:", error);
+    logger.warn("[Transaction Journal] Failed to resolve wallet owner", { error });
     return undefined;
   }
 
   if (!data?.user_id) {
-    console.debug("[Transaction Journal] Wallet address not linked to a user:", normalized);
+    logger.debug("[Transaction Journal] Wallet address not linked to a user", { normalized });
   }
 
   return data?.user_id ?? undefined;
@@ -45,7 +47,7 @@ async function sendUserNotification(
   title: string,
   body?: string,
   link?: string,
-  metadata?: Record<string, unknown>
+  metadata?: Json
 ): Promise<void> {
   if (!UUID_REGEX.test(userId)) {
     return;
@@ -55,13 +57,13 @@ async function sendUserNotification(
     _user_id: userId,
     _type: type,
     _title: title,
-    _body: body ?? null,
-    _link: link ?? null,
-    _metadata: metadata ?? null,
+    _body: body ?? undefined,
+    _link: link ?? undefined,
+    _metadata: metadata ?? undefined,
   });
 
   if (error) {
-    console.warn("[Transaction Journal] Failed to send notification:", error);
+    logger.warn("[Transaction Journal] Failed to send notification", { error });
   }
 }
 
@@ -85,7 +87,7 @@ export async function notifyTransactionStatus(
     );
   }
 
-  const metadata = {
+  const metadata: Json = {
     transactionId: transaction.transactionId,
     fromCurrency: transaction.fromCurrency,
     toCurrency: transaction.toCurrency,
@@ -95,7 +97,7 @@ export async function notifyTransactionStatus(
     senderAddress: transaction.walletAddress,
     arcTxHash: transaction.arcTxHash,
     status,
-  } as Record<string, unknown>;
+  } as Json;
 
   if (status === "pending") {
     if (senderUserId) {

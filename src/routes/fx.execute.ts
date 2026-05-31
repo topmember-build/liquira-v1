@@ -27,6 +27,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
+import { CONFIGURATION } from "@/backend/config/environment";
 import { getCircleWalletBalances } from "@/server/providers/circle";
 import { simulate_arc_settlement } from "@/server/arc-settlement.server";
 import { route_payment } from "@/server/services/payment-router";
@@ -35,6 +36,8 @@ import {
   finalize_execution,
   notifyTransactionStatus,
 } from "@/server/services/transaction-journal";
+import { enforceRateLimit, getCorsHeaders } from "@/server/utils/security";
+import { logger } from "@/backend/utils/logger";
 
 const Body = z.object({
   userId: z.string().optional(),
@@ -47,11 +50,7 @@ const Body = z.object({
   permit: z.record(z.any()).optional(),
 });
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+const CORS = getCorsHeaders();
 
 export const Route = createFileRoute("/fx/execute")({
   server: {
@@ -59,13 +58,30 @@ export const Route = createFileRoute("/fx/execute")({
       OPTIONS: async () =>
         new Response(null, { status: 204, headers: CORS }),
       POST: async ({ request }) => {
+        const rateLimit = enforceRateLimit(
+          request,
+          CONFIGURATION.RATE_LIMIT.EXECUTE_PER_MINUTE,
+          60_000,
+        );
+
+        if (rateLimit.limited) {
+          return Response.json(
+            {
+              status: "failed",
+              error: "Rate limit exceeded. Try again later.",
+              retryAfterSeconds: rateLimit.retryAfter,
+            },
+            { status: 429, headers: CORS },
+          );
+        }
+
         let txId: string | undefined;
 
         try {
-          console.log("[FX Execute] Received POST request");
+          logger.info("[FX Execute] Received POST request");
 
           const data = Body.parse(await request.json());
-          console.log("[FX Execute] Request body:", {
+          logger.debug("[FX Execute] Request body", {
             fromCurrency: data.fromCurrency,
             toCurrency: data.toCurrency,
             amount: data.amount,
@@ -80,10 +96,9 @@ export const Route = createFileRoute("/fx/execute")({
               const balances = await getCircleWalletBalances(treasuryWalletId);
               console.log("[FX Execute] Circle treasury balances checked:", balances);
             } catch (circleError) {
-              console.warn(
-                "[FX Execute] Circle balance check failed (non-fatal):",
-                circleError instanceof Error ? circleError.message : String(circleError)
-              );
+              logger.warn("[FX Execute] Circle balance check failed (non-fatal):", {
+                error: circleError instanceof Error ? circleError.message : String(circleError),
+              });
             }
           } else {
             console.info(
@@ -124,14 +139,15 @@ export const Route = createFileRoute("/fx/execute")({
           });
 
           txId = routeResult.transactionId;
-          console.log("[FX Execute] Route created for transaction", txId, {
+          logger.info("[FX Execute] Route created for transaction", {
+            txId,
             providerId: routeResult.route.providerId,
             routeId: routeResult.route.routeId,
           });
 
           // 3. Start execution phase in the transaction journal
           await start_execution(txId, routeResult.route.arcPayload as unknown as Record<string, unknown>);
-          console.log("[FX Execute] Execution started for transaction", txId);
+          logger.info("[FX Execute] Execution started for transaction", { txId });
 
           // 4. Execute Arc settlement (testnet) - THIS IS THE CRITICAL PATH
           const arcResult = await simulate_arc_settlement({
@@ -142,7 +158,7 @@ export const Route = createFileRoute("/fx/execute")({
             permit: data.permit as any,
           });
 
-          console.log("[FX Execute] Arc settlement completed:", arcResult);
+          logger.info("[FX Execute] Arc settlement completed", { arcResult });
 
           // 5. Finalize transaction status to SUCCESS with Arc tx hash
           const updatedTx = await finalize_execution(txId, "success", {
@@ -154,7 +170,7 @@ export const Route = createFileRoute("/fx/execute")({
             await notifyTransactionStatus(updatedTx, "success");
           }
 
-          console.log("[FX Execute] Transaction updated to success:", updatedTx);
+          logger.info("[FX Execute] Transaction updated to success", { txId, updatedTx });
 
           return Response.json(
             {
@@ -171,7 +187,7 @@ export const Route = createFileRoute("/fx/execute")({
         } catch (error) {
           const errorMsg =
             error instanceof Error ? error.message : String(error);
-          console.error("[FX Execute] Error:", errorMsg, { txId });
+          logger.error("[FX Execute] Error", { error: errorMsg, txId });
 
           if (txId) {
             try {
@@ -182,7 +198,7 @@ export const Route = createFileRoute("/fx/execute")({
                 await notifyTransactionStatus(failedTx, "failed");
               }
             } catch (updateError) {
-              console.error("[FX Execute] Failed to update transaction to failed:", updateError);
+              logger.error("[FX Execute] Failed to update transaction to failed", { error: updateError });
             }
           }
 

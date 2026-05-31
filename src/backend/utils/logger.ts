@@ -30,7 +30,11 @@ class Logger {
 
   private formatMessage(level: LogLevel, message: string, context?: LogContext): string {
     const timestamp = new Date().toISOString();
-    const contextStr = context ? ` ${JSON.stringify(context)}` : "";
+    const replacer = (_key: string, value: any) => {
+      if (typeof value === "bigint") return value.toString();
+      return value;
+    };
+    const contextStr = context ? ` ${JSON.stringify(context, replacer)}` : "";
     return `[${timestamp}] ${level.toUpperCase()}: ${message}${contextStr}`;
   }
 

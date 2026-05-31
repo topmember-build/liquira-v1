@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Loader2, Send, ArrowDownUp, Settings, Check, AlertTriangle, Info } from "lucide-react";
 import { SectionHeader } from "./Capabilities";
-import { STABLES } from "@/lib/stables";
+import { STABLES, getStable } from "@/lib/stables";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
+import { usePrices } from "@/contexts/PricesContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { fxService, type FxQuote, type TxStatus } from "@/lib/fx-service";
 import { useNavigate } from "@tanstack/react-router";
@@ -57,9 +58,41 @@ const STATUS_LABEL: Record<TxStatus | "idle", string> = {
 function SwapPanel() {
   const { user } = useAuth();
   const { formatUsd } = useDisplayCurrency();
+  const { convertFromUsd } = usePrices();
   const { isConnected, address } = useWallet();
   const { formData, updateFormData, resetPayment } = usePayment();
   const navigate = useNavigate();
+
+  const PEG_SYMBOLS: Record<string, string> = {
+    USD: "$",
+    NGN: "₦",
+    EUR: "€",
+    GBP: "£",
+    JPY: "¥",
+    BRL: "R$",
+    BTC: "₿",
+  };
+
+  const formatPegAmount = (symbol: string, amount: number) => {
+    const stable = getStable(symbol);
+    if (!stable) {
+      return formatUsd(amount, { decimals: 2 });
+    }
+
+    const usdValue = amount * stable.pegValueUsd;
+    if (stable.pegCurrency === "USD") {
+      return formatUsd(usdValue, { decimals: 2 });
+    }
+
+    const converted = convertFromUsd(usdValue, stable.pegCurrency);
+    const formatted = new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(converted);
+
+    const symbolChar = PEG_SYMBOLS[stable.pegCurrency] ?? stable.pegCurrency;
+    return `${symbolChar}${formatted}`;
+  };
 
   const [fromCurrency, setFromCurrency] = useState("USDC");
   const [toCurrency, setToCurrency] = useState("EURC");
@@ -349,7 +382,7 @@ const minReceived = estOut * (1 - slippageBps / 10_000);
             />
           </div>
           <div className="mt-2 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
-            <span>≈ {formatUsd(estOut, { decimals: 2 })}</span>
+            <span>≈ {formatPegAmount(toCurrency, estOut)}</span>
             <span className="flex items-center gap-1.5 text-primary">
               <span className="h-1.5 w-1.5 animate-pulse-soft rounded-full bg-primary" />
               {quoting ? "quoting…" : quoteError ? "quote unavailable" : "live quote"}

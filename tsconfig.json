@@ -8,6 +8,7 @@
     "types": ["vite/client"],
 
     /* Bundler mode */
+    "baseUrl": ".",
     "moduleResolution": "Bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": false,

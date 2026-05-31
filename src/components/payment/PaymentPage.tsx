@@ -2,6 +2,7 @@
 import { Loader2, Send, Info, ShieldCheck, RefreshCcw, ArrowLeft } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAccount } from "wagmi";
+import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { usePermitSignature } from "@/hooks/usePermitSignature";
@@ -13,7 +14,9 @@ import {
   TransactionStatus as TransactionStatusType,
   ExecutePaymentRequest,
 } from "@/hooks/useBackendAPI";
-import { arcTestnet } from "@/lib/arc-testnet";import { HAS_WALLETCONNECT } from "@/lib/wagmi";import { TransactionStatus } from "@/components/payment/TransactionStatus";
+import { arcTestnet, FAUCETS } from "@/lib/arc-testnet";
+import { HAS_WALLETCONNECT } from "@/lib/wagmi";
+import { TransactionStatus } from "@/components/payment/TransactionStatus";
 import TokenIcon from "@/lib/token-icons";
 import { Button } from "@/components/ui/button";
 import { validateWalletAddress } from "@/lib/validation";
@@ -23,12 +26,18 @@ const PAYMENT_TOKENS = ["USDC", "EURC", "cirBTC"];
 
 export const PaymentPage = () => {
   const { address: connectedAddress, isConnected } = useAccount();
+  const { primaryWallet: dynamicWallet } = useDynamicContext();
   const { user } = useAuth();
   const wallet = useWallet();
   const { connect, refreshBalances } = wallet;
   const payment = usePayment();
   const navigate = useNavigate();
   const hasInjectedProvider = typeof window !== "undefined" && typeof (window as any).ethereum !== "undefined";
+
+  // Use Dynamic wallet address if no wagmi wallet is connected
+  const userAddress = connectedAddress || dynamicWallet?.address;
+  const isWalletConnected = isConnected || !!dynamicWallet?.address;
+  const isDynamicWallet = !isConnected && !!dynamicWallet?.address;
 
   const { quotes, loading: quoting, error: quoteError, fetchQuotes } = useQuote();
   const { loading: executing, error: executeError, executePayment } = useExecutePayment();
@@ -81,20 +90,20 @@ export const PaymentPage = () => {
         sourceToken: fromCurrency,
         destinationToken: toCurrency,
         amount: amountStr,
-        userAddress: connectedAddress ?? "",
+        userAddress: userAddress ?? "",
         paymentMode: true,
         strategy: "lowest-fee",
       });
     }, 300);
 
     return () => clearTimeout(timeout);
-  }, [amountStr, fromCurrency, toCurrency, connectedAddress]);
+  }, [amountStr, fromCurrency, toCurrency, userAddress]);
 
   const handleExecute = async () => {
     setLocalError(null);
     setWalletNote(null);
 
-    if (!isConnected) {
+    if (!isWalletConnected) {
       await connect?.(
         hasInjectedProvider ? "injected" : HAS_WALLETCONNECT ? "walletconnect" : "injected",
       );
@@ -139,7 +148,7 @@ export const PaymentPage = () => {
       setWalletNote("Requesting wallet approval; Arc treasury will sponsor gas for this payment...");
 
       const permitResult = await requestPermitSignature({
-        owner: connectedAddress as `0x${string}`,
+        owner: userAddress as `0x${string}`,
         spender: treasuryAddress as `0x${string}`,
         token: tokenInfo.address as `0x${string}`,
         amount: amountUnits,
@@ -281,7 +290,7 @@ export const PaymentPage = () => {
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                 <span>PAYMENT</span>
                 <span>·</span>
-                <span>{isConnected ? "WALLET-CONNECTED" : "CONNECT WALLET"}</span>
+                <span>{isWalletConnected ? `WALLET-CONNECTED (${isDynamicWallet ? "Dynamic" : "Wagmi"})` : "CONNECT WALLET"}</span>
               </div>
               <span className="text-primary">wallet-only</span>
             </div>
@@ -433,6 +442,26 @@ export const PaymentPage = () => {
                         <span className="font-mono">{(wallet.balances.cirBTC ?? 0).toFixed(8)}</span>
                       </span>
                     </p>
+                  </div>
+                </div>
+              )}
+              {isConnected && (
+                <div className="mt-4 rounded-2xl border border-border bg-background p-4 text-sm">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-semibold text-foreground">Need testnet USDC?</p>
+                      <p className="text-sm text-muted-foreground">
+                        Fund your Arc testnet wallet using the official Circle developer faucet.
+                      </p>
+                    </div>
+                    <a
+                      href={FAUCETS.find((item) => item.label.includes("Circle Faucet"))?.url ?? "https://faucet.circle.com/"}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="inline-flex items-center justify-center rounded-full border border-primary px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/10"
+                    >
+                      Open Circle faucet
+                    </a>
                   </div>
                 </div>
               )}

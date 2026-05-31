@@ -37,7 +37,9 @@ import {
   ARC_CONTRACTS,
   ERC20_TRANSFER_ABI,
 } from "@/lib/arc-testnet";
+import { logger } from "@/backend/utils/logger";
 import { getTokenBySymbol } from "@/lib/tokens";
+import { CONFIGURATION } from "@/backend/config/environment";
 
 const publicClient = createPublicClient({
   chain: arcTestnet,
@@ -116,11 +118,7 @@ export async function simulate_arc_settlement(params: {
 }): Promise<{ txHash: string; success: boolean }> {
   try {
     if (!params.destinationAddress || params.destinationAddress === "0x") {
-      console.log("[Arc Settlement] No destination address, returning mock tx");
-      return {
-        txHash: generateMockTxHash(),
-        success: true,
-      };
+      throw new Error("Destination address is required for Arc settlement.");
     }
 
     // Validate address format
@@ -133,7 +131,7 @@ export async function simulate_arc_settlement(params: {
     const tokenAddress = token?.address || ARC_CONTRACTS.USDC;
     const decimals = token?.decimals ?? 6;
 
-    console.log("[Arc Settlement] Simulating Arc token transfer", {
+    logger.info("[Arc Settlement] Simulating Arc token transfer", {
       amount: params.amount,
       token: tokenSymbol,
       tokenAddress,
@@ -144,163 +142,169 @@ export async function simulate_arc_settlement(params: {
     // Verify Arc network is accessible before attempting live settlement.
     try {
       const blockNumber = await publicClient.getBlockNumber();
-      console.log("[Arc Settlement] Arc testnet accessible, block number:", blockNumber);
+      logger.info("[Arc Settlement] Arc testnet accessible", { blockNumber });
     } catch (networkError) {
-      console.warn(
-        "[Arc Settlement] Arc network check failed (non-fatal):",
-        networkError instanceof Error ? networkError.message : String(networkError)
-      );
+      logger.warn("[Arc Settlement] Arc network check failed (non-fatal)", {
+        error: networkError instanceof Error ? networkError.message : String(networkError),
+      });
       // Continue anyway; a mock execution can still be returned.
     }
 
     const walletClientBundle = getWalletClient();
-    if (walletClientBundle) {
-      const { account, client } = walletClientBundle;
-      const amountInUnits = formatArcAmount(params.amount, decimals);
-
-      if (params.permit) {
-        const permit = params.permit;
-        if (!params.sourceWalletAddress) {
-          throw new Error("Permit execution requires the source wallet address.");
-        }
-
-        const parsedSignature = parseSignature(permit.signature as `0x${string}`);
-        if (parsedSignature.v === undefined) {
-          throw new Error("Invalid permit signature: missing v value.");
-        }
-
-        console.log("[Arc Settlement] Executing permit flow", {
-          owner: permit.owner,
-          spender: permit.spender,
-          token: permit.token,
-          destination: params.destinationAddress,
-          amountInUnits: permit.value,
-        });
-
-        const permitTxHash = await client.writeContract({
-          account,
-          address: permit.token as `0x${string}`,
-          abi: ERC20_PERMIT_ABI,
-          functionName: "permit",
-          args: [
-            permit.owner as `0x${string}`,
-            permit.spender as `0x${string}`,
-            BigInt(permit.value),
-            BigInt(permit.deadline),
-            Number(parsedSignature.v),
-            parsedSignature.r,
-            parsedSignature.s,
-          ],
-        });
-
-        console.log("[Arc Settlement] Permit tx sent, waiting for confirmation", { permitTxHash });
-        const permitReceipt = await publicClient.waitForTransactionReceipt({
-          hash: permitTxHash as `0x${string}`,
-          confirmations: 1,
-          timeout: 120_000,
-        });
-
-        if (permitReceipt.status !== "success") {
-          throw new Error(`Permit transaction failed or reverted: ${permitReceipt.status}`);
-        }
-
-        const txHash = await client.writeContract({
-          account,
-          address: permit.token as `0x${string}`,
-          abi: ERC20_PERMIT_ABI,
-          functionName: "transferFrom",
-          args: [
-            permit.owner as `0x${string}`,
-            params.destinationAddress as `0x${string}`,
-            BigInt(permit.value),
-          ],
-        });
-
-        console.log("[Arc Settlement] TransferFrom transaction sent, hash:", txHash);
-
-        const receipt = await publicClient.waitForTransactionReceipt({
-          hash: txHash as `0x${string}`,
-          confirmations: 1,
-          timeout: 120_000,
-        });
-
-        console.log("[Arc Settlement] TransferFrom receipt:", receipt);
-
-        if (receipt.status !== "success") {
-          throw new Error(`Arc transferFrom failed or reverted: ${receipt.status}`);
-        }
-
-        return {
-          txHash: txHash as string,
-          success: true,
-        };
-      }
-
-      console.log("[Arc Settlement] Sending real ERC20 transfer from treasury", {
-        destination: params.destinationAddress,
-        amount: params.amount,
-        amountInUnits: amountInUnits.toString(),
-        tokenAddress,
-      });
-
-      try {
-        const txHash = await client.writeContract({
-          account,
-          address: tokenAddress as `0x${string}`,
-          abi: ERC20_TRANSFER_ABI,
-          functionName: "transfer",
-          args: [params.destinationAddress as `0x${string}`, amountInUnits],
-        });
-
-        console.log("[Arc Settlement] Transaction sent, hash:", txHash);
-
-        const receipt = await publicClient.waitForTransactionReceipt({
-          hash: txHash as `0x${string}`,
-          confirmations: 1,
-          timeout: 120_000,
-        });
-
-        console.log("[Arc Settlement] Transaction receipt:", receipt);
-
-        if (receipt.status !== "success") {
-          throw new Error(
-            `Arc transaction failed or reverted: ${receipt.status}`
-          );
-        }
-
-        return {
-          txHash: txHash as string,
-          success: true,
-        };
-      } catch (transferError) {
-        console.warn("[Arc Settlement] Real transfer failed, falling back to mock:", transferError);
-
-        const errorMessage = transferError instanceof Error ? transferError.message : String(transferError);
-        if (errorMessage.includes("transfer amount exceeds balance") ||
-            errorMessage.includes("ERC20") ||
-            errorMessage.includes("insufficient balance")) {
-          console.log("[Arc Settlement] Insufficient balance detected, using mock transfer");
-        }
-
+    if (!walletClientBundle) {
+      if (CONFIGURATION.EXECUTION.allowMockArcSettlement || !CONFIGURATION.isProduction) {
         const mockTxHash = generateMockTxHash();
-        console.log("[Arc Settlement] Returning mock tx hash after failed real transfer:", mockTxHash);
-
+        logger.warn(
+          "[Arc Settlement] ARC_PRIVATE_KEY not configured; returning mock tx hash in non-production or mock mode.",
+          { allowMock: true },
+        );
         return {
           txHash: mockTxHash,
           success: true,
         };
       }
+
+      throw new Error(
+        "ARC_PRIVATE_KEY is required for Arc settlement in production. Set ARC_PRIVATE_KEY or enable ARC_MOCK_MODE for local development."
+      );
     }
 
-    const mockTxHash = generateMockTxHash();
-    console.log("[Arc Settlement] Returning mock tx hash:", mockTxHash);
+    const { account, client } = walletClientBundle;
+    const amountInUnits = formatArcAmount(params.amount, decimals);
 
-    return {
-      txHash: mockTxHash,
-      success: true,
-    };
+    if (params.permit) {
+      const permit = params.permit;
+      if (!params.sourceWalletAddress) {
+        throw new Error("Permit execution requires the source wallet address.");
+      }
+
+      const parsedSignature = parseSignature(permit.signature as `0x${string}`);
+      if (parsedSignature.v === undefined) {
+        throw new Error("Invalid permit signature: missing v value.");
+      }
+
+      logger.info("[Arc Settlement] Executing permit flow", {
+        owner: permit.owner,
+        spender: permit.spender,
+        token: permit.token,
+        destination: params.destinationAddress,
+        amountInUnits: permit.value,
+      });
+
+      const permitTxHash = await client.writeContract({
+        account,
+        chain: arcTestnet,
+        address: permit.token as `0x${string}`,
+        abi: ERC20_PERMIT_ABI,
+        functionName: "permit",
+        args: [
+          permit.owner as `0x${string}`,
+          permit.spender as `0x${string}`,
+          BigInt(permit.value),
+          BigInt(permit.deadline),
+          Number(parsedSignature.v),
+          parsedSignature.r,
+          parsedSignature.s,
+        ],
+      });
+
+      logger.info("[Arc Settlement] Permit tx sent, waiting for confirmation", { permitTxHash });
+      const permitReceipt = await publicClient.waitForTransactionReceipt({
+        hash: permitTxHash as `0x${string}`,
+        confirmations: 1,
+        timeout: 120_000,
+      });
+
+      if (permitReceipt.status !== "success") {
+        throw new Error(`Permit transaction failed or reverted: ${permitReceipt.status}`);
+      }
+
+      const txHash = await client.writeContract({
+        account,
+        chain: arcTestnet,
+        address: permit.token as `0x${string}`,
+        abi: ERC20_PERMIT_ABI,
+        functionName: "transferFrom",
+        args: [
+          permit.owner as `0x${string}`,
+          params.destinationAddress as `0x${string}`,
+          BigInt(permit.value),
+        ],
+      });
+
+      logger.info("[Arc Settlement] TransferFrom transaction sent", { txHash });
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash as `0x${string}`,
+        confirmations: 1,
+        timeout: 120_000,
+      });
+
+      logger.info("[Arc Settlement] TransferFrom receipt", { receipt });
+
+      if (receipt.status !== "success") {
+        throw new Error(`Arc transferFrom failed or reverted: ${receipt.status}`);
+      }
+
+      return {
+        txHash: txHash as string,
+        success: true,
+      };
+    }
+
+    logger.info("[Arc Settlement] Sending real ERC20 transfer from treasury", {
+      destination: params.destinationAddress,
+      amount: params.amount,
+      amountInUnits: amountInUnits.toString(),
+      tokenAddress,
+    });
+
+    try {
+      const txHash = await client.writeContract({
+        account,
+        chain: arcTestnet,
+        address: tokenAddress as `0x${string}`,
+        abi: ERC20_TRANSFER_ABI,
+        functionName: "transfer",
+        args: [params.destinationAddress as `0x${string}`, amountInUnits],
+      });
+
+      logger.info("[Arc Settlement] Transaction sent", { txHash });
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash as `0x${string}`,
+        confirmations: 1,
+        timeout: 120_000,
+      });
+
+      logger.info("[Arc Settlement] Transaction receipt", { receipt });
+
+      if (receipt.status !== "success") {
+        throw new Error(`Arc transaction failed or reverted: ${receipt.status}`);
+      }
+
+      return {
+        txHash: txHash as string,
+        success: true,
+      };
+    } catch (transferError) {
+      const errorMessage = transferError instanceof Error ? transferError.message : String(transferError);
+      logger.warn("[Arc Settlement] Real transfer failed", { error: errorMessage });
+
+      if (CONFIGURATION.EXECUTION.allowMockArcSettlement || !CONFIGURATION.isProduction) {
+        const mockTxHash = generateMockTxHash();
+        logger.warn(
+          "[Arc Settlement] Returning mock tx hash after failed real transfer in mock mode.",
+          { mockTxHash },
+        );
+        return {
+          txHash: mockTxHash,
+          success: true,
+        };
+      }
+
+      throw new Error(`Arc transfer failed: ${errorMessage}`);
+    }
   } catch (error) {
-    console.error("[Arc Settlement] Simulation failed:", error);
+    logger.error("[Arc Settlement] Simulation failed", { error });
     throw new Error(
       `Arc settlement simulation failed: ${error instanceof Error ? error.message : String(error)}`
     );

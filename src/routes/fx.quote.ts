@@ -4,12 +4,10 @@
  */
 import { createFileRoute } from "@tanstack/react-router";
 import { calculate_output } from "@/server/fx-engine.server";
+import { CONFIGURATION } from "@/backend/config/environment";
+import { enforceRateLimit, getCorsHeaders } from "@/server/utils/security";
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+const CORS = getCorsHeaders();
 
 export const Route = createFileRoute("/fx/quote")({
   server: {
@@ -17,6 +15,22 @@ export const Route = createFileRoute("/fx/quote")({
       OPTIONS: async () =>
         new Response(null, { status: 204, headers: CORS }),
       GET: async ({ request }) => {
+        const rateLimit = enforceRateLimit(
+          request,
+          CONFIGURATION.RATE_LIMIT.QUOTE_PER_MINUTE,
+          60_000,
+        );
+
+        if (rateLimit.limited) {
+          return Response.json(
+            {
+              error: "Rate limit exceeded. Try again later.",
+              retryAfterSeconds: rateLimit.retryAfter,
+            },
+            { status: 429, headers: CORS },
+          );
+        }
+
         try {
           const url = new URL(request.url);
           const from = (url.searchParams.get("from") ?? "").trim();

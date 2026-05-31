@@ -41,6 +41,7 @@ const envSchema = z.object({
   // ARC configuration (optional for local development)
   ARC_ADDRESS: z.string().optional(),
   ARC_WEBHOOK_SECRET: z.string().optional(),
+  ARC_MOCK_MODE: z.string().transform((v) => v === "true").default("false"),
 
   // Logging
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
@@ -139,6 +140,7 @@ export const CONFIGURATION = {
     EXECUTION_TIMEOUT_SECONDS: 3600, // 1 hour timeout
     RETRY_ATTEMPTS: 3,
     RETRY_DELAY_MS: 5000,
+    allowMockArcSettlement: config.ARC_MOCK_MODE,
   },
 };
 

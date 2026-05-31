@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSignMessage } from "wagmi";
+import { useDynamicContext, DynamicWidget } from "@dynamic-labs/sdk-react-core";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
@@ -29,10 +30,12 @@ function WalletsPage() {
   const { user, session } = useAuth();
   const wallet = useWallet();
   const { signMessageAsync } = useSignMessage();
+  const { primaryWallet: dynamicWallet, sdkHasLoaded: dynamicSDKLoaded } = useDynamicContext();
   const [wallets, setWallets] = useState<LinkedWallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<FlowStep>("idle");
   const [challenge, setChallenge] = useState<string | null>(null);
+  const [walletType, setWalletType] = useState<"wagmi" | "dynamic" | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -54,16 +57,8 @@ function WalletsPage() {
   }, [user?.id]);
 
   const startLink = async () => {
-    if (!user || !session || !wallet.address) {
-      toast.error("Please connect a wallet and sign in to your account before linking.");
-      return;
-    }
-    if (!wallet.connected) {
-      toast.error("Please connect your wallet before signing.");
-      return;
-    }
-    if (wallet.chainId !== "arc-testnet") {
-      toast.error("Please switch your wallet to Arc testnet before linking.");
+    if (!user || !session) {
+      toast.error("Please sign in to your account before linking a wallet.");
       return;
     }
 
@@ -73,6 +68,115 @@ function WalletsPage() {
 
     if (!authHeaders) {
       toast.error("Unable to authenticate. Please sign in again.");
+      return;
+    }
+
+    // Handle Dynamic wallet linking
+    if (walletType === "dynamic") {
+      if (!dynamicWallet?.address) {
+        toast.error("No Dynamic wallet connected. Please create or connect a Dynamic wallet first.");
+        return;
+      }
+
+      setStep("preparing");
+      setChallenge(null);
+      try {
+        const response = await requestWalletNonce({
+          data: { address: dynamicWallet.address, chain: "arc-testnet" },
+          headers: authHeaders,
+        });
+        const typedResponse = response as any;
+        const message =
+          typeof response === "string"
+            ? response
+            : typedResponse?.message ?? typedResponse?.result?.message;
+        if (!message || typeof message !== "string") {
+          throw new Error("Wallet challenge generation failed. Please try again.");
+        }
+        
+        setChallenge(message);
+        setStep("awaiting_signature");
+
+        let signature: string | undefined;
+        let signError: unknown;
+        
+        try {
+          // Prefer connector-level signMessage API provided by Dynamic
+          const connector: any = dynamicWallet?.connector;
+          if (connector) {
+            try {
+              if (typeof connector.signMessage === "function") {
+                signature = await connector.signMessage(String(message));
+              } else if (typeof connector.signMessageWithContext === "function") {
+                signature = await connector.signMessageWithContext({ message: String(message) });
+              } else if (typeof connector.getWalletClient === "function") {
+                // Some connectors expose a low-level wallet client
+                const wc = await connector.getWalletClient();
+                if (wc && typeof wc.signMessage === "function") {
+                  const maybe = await wc.signMessage({ message: String(message), accountAddress: dynamicWallet.address });
+                  // wc.signMessage may return object or string
+                  signature = typeof maybe === "string" ? maybe : maybe?.signature ?? maybe?.signed ?? undefined;
+                }
+              }
+            } catch (inner) {
+              signError = inner;
+            }
+          }
+
+          // Fallback to window.ethereum.personal_sign
+          if (!signature && typeof (window as any)?.ethereum?.request === "function") {
+            try {
+              signature = await (window as any).ethereum.request({ method: "personal_sign", params: [String(message), dynamicWallet.address] });
+            } catch (fallbackErr) {
+              signError = signError ?? fallbackErr;
+            }
+          }
+        } catch (err) {
+          signError = err;
+        }
+
+        if (!signature) {
+          throw new Error(signError instanceof Error ? signError.message : "Signature request failed");
+        }
+
+        setStep("verifying");
+        await verifyAndLinkWallet({
+          data: {
+            address: dynamicWallet.address,
+            chain: "arc-testnet",
+            signature,
+            label: "Dynamic Wallet",
+          },
+          headers: authHeaders,
+        });
+        toast.success("Dynamic wallet verified and linked");
+        setStep("idle");
+        setChallenge(null);
+        setWalletType(null);
+        void load();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Wallet link failed";
+        if (msg.includes("User rejected")) {
+          toast.error("Wallet signature request was declined. Please try again.");
+        } else {
+          toast.error(msg);
+        }
+        setStep("idle");
+      }
+      return;
+    }
+
+    // Handle wagmi wallet linking (existing logic)
+    if (!wallet.address) {
+      toast.error("Please connect a wallet and sign in to your account before linking.");
+      return;
+    }
+    if (!wallet.connected) {
+      toast.error("Please connect your wallet before signing.");
+      return;
+    }
+    if (wallet.chainId !== "arc-testnet") {
+      toast.error("Please switch your wallet to Arc testnet before linking.");
       return;
     }
 
@@ -192,11 +296,25 @@ function WalletsPage() {
 
   return (
     <div className="space-y-6">
+      {dynamicSDKLoaded && (
+        <section className="rounded-md border border-border bg-surface-1 p-5">
+          <div className="text-mono-label mb-4" style={{ fontSize: 10 }}>
+            YOUR DYNAMIC WALLET
+          </div>
+          <div className="rounded-md border border-border bg-background p-4">
+            <DynamicWidget />
+          </div>
+          <p className="mt-3 font-mono text-[11px] text-muted-foreground">
+            Manage your Dynamic embedded wallet. Link it to your account below or use browser/WalletConnect wallets.
+          </p>
+        </section>
+      )}
+
       <section className="rounded-md border border-border bg-surface-1 p-5">
         <div className="text-mono-label mb-3" style={{ fontSize: 10 }}>
           GUIDED WALLET LINK
         </div>
-        {!wallet.connected || !wallet.address ? (
+        {!wallet.connected && !dynamicWallet?.address ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="font-mono text-[12px] text-muted-foreground">
               Step 1 - Connect a wallet, then sign a message to verify ownership before linking.
@@ -204,10 +322,12 @@ function WalletsPage() {
             <div className="flex gap-2">
               <button
                 onClick={async () => {
+                  setWalletType("wagmi");
                   try {
                     await wallet.connect("injected");
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : "Unable to connect browser wallet.");
+                    setWalletType(null);
                   }
                 }}
                 className="bg-primary px-3 py-2 font-mono text-[11px] font-semibold uppercase tracking-widest text-primary-foreground hover:opacity-90"
@@ -216,10 +336,12 @@ function WalletsPage() {
               </button>
               <button
                 onClick={async () => {
+                  setWalletType("wagmi");
                   try {
                     await wallet.connect("walletconnect");
                   } catch (e) {
                     toast.error(e instanceof Error ? e.message : "Unable to connect WalletConnect.");
+                    setWalletType(null);
                   }
                 }}
                 disabled={!wallet.hasWalletConnect}
@@ -227,28 +349,41 @@ function WalletsPage() {
               >
                 WalletConnect
               </button>
+              <button
+                onClick={() => {
+                  setWalletType("dynamic");
+                  startLink();
+                }}
+                disabled={!dynamicWallet?.address || !dynamicSDKLoaded}
+                className="border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-widest text-foreground hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"
+                title={!dynamicSDKLoaded ? "Dynamic SDK not loaded" : !dynamicWallet?.address ? "No Dynamic wallet connected" : "Connect Dynamic wallet"}
+              >
+                Dynamic Wallet
+              </button>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
-            <FlowSteps current={step} alreadyLinked={alreadyLinked} />
+            <FlowSteps current={step} alreadyLinked={walletType === "dynamic" ? dynamicWallet?.address ? wallets.some((w) => w.address.toLowerCase() === dynamicWallet.address.toLowerCase()) : false : wallet.address ? wallets.some((w) => w.address.toLowerCase() === wallet.address!.toLowerCase()) : false} />
             <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-border bg-background p-3">
               <div>
                 <div className="flex items-center gap-2 font-mono text-[13px] text-foreground">
                   <WalletIcon size={14} className="text-primary" />
-                  {wallet.address.slice(0, 6)}…{wallet.address.slice(-4)}
+                  {walletType === "dynamic" && dynamicWallet?.address
+                    ? `${dynamicWallet.address.slice(0, 6)}…${dynamicWallet.address.slice(-4)}`
+                    : wallet.address
+                      ? `${wallet.address.slice(0, 6)}…${wallet.address.slice(-4)}`
+                      : "No wallet"}
                 </div>
                 <div className="mt-1 flex items-center gap-2 font-mono text-[11px] text-muted-foreground">
-                  <span>{wallet.kind}</span>
+                  <span>{walletType === "dynamic" ? "Dynamic" : wallet.kind ?? "wallet"}</span>
                   <span>·</span>
-                  {wallet.chainId === "arc-testnet" ? (
-                    <span>Arc Testnet</span>
-                  ) : (
-                    <span>{wallet.chainId}</span>
-                  )}
+                  <span>Arc Testnet</span>
                 </div>
               </div>
-              {alreadyLinked ? (
+              {walletType === "dynamic" && dynamicWallet?.address && wallets.some((w) => w.address.toLowerCase() === dynamicWallet.address.toLowerCase()) ? (
+                <div className="font-mono text-[11px] text-primary">Already linked ✓</div>
+              ) : walletType === "wagmi" && wallet.address && wallets.some((w) => w.address.toLowerCase() === wallet.address!.toLowerCase()) ? (
                 <div className="font-mono text-[11px] text-primary">Already linked ✓</div>
               ) : (
                 <button
