@@ -6,9 +6,9 @@
   "packageManager": "npm@10.9.2",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build",
-    "build:ci": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
-    "build:frontend": "vite build",
+    "build": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
+    "build:ci": "npm run build",
+    "build:frontend": "node --max-old-space-size=4096 ./node_modules/vite/bin/vite.js build",
     "build:server": "tsc -p tsconfig.build.json && node ./scripts/rename-dist-backend-cjs.mjs",
     "build:prod": "npm run build:frontend && npm run build:server",
     "start:prod": "node dist/backend/index.js",
