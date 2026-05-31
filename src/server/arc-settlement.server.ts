@@ -286,8 +286,8 @@ export async function simulate_arc_settlement(params: {
         success: true,
       };
     } catch (transferError) {
-      const errorMessage = transferError instanceof Error ? transferError.message : String(transferError);
-      logger.warn("[Arc Settlement] Real transfer failed", { error: errorMessage });
+      const errorMessage = normalizeArcErrorMessage(transferError);
+      logger.warn("[Arc Settlement] Real transfer failed", { error: errorMessage, rawError: transferError });
 
       if (CONFIGURATION.EXECUTION.allowMockArcSettlement || !CONFIGURATION.isProduction) {
         const mockTxHash = generateMockTxHash();
@@ -304,11 +304,37 @@ export async function simulate_arc_settlement(params: {
       throw new Error(`Arc transfer failed: ${errorMessage}`);
     }
   } catch (error) {
-    logger.error("[Arc Settlement] Simulation failed", { error });
+    const errorMessage = normalizeArcErrorMessage(error);
+    logger.error("[Arc Settlement] Simulation failed", { error: errorMessage, rawError: error });
     throw new Error(
-      `Arc settlement simulation failed: ${error instanceof Error ? error.message : String(error)}`
+      `Arc settlement simulation failed: ${errorMessage}`
     );
   }
+}
+
+function normalizeArcErrorMessage(error: unknown): string {
+  const rawMessage = error instanceof Error ? error.message : String(error);
+  const message = rawMessage
+    .replace(/\s*Contract Call:[\s\S]*/i, "")
+    .replace(/\s*Details:[\s\S]*/i, "")
+    .replace(/\s*Version:[\s\S]*/i, "")
+    .replace(/execution reverted:\s*/i, "")
+    .trim();
+
+  if (/transfer amount exceeds balance/i.test(message)) {
+    return "transfer amount exceeds balance";
+  }
+
+  if (/ERC20: transfer amount exceeds balance/i.test(message)) {
+    return "transfer amount exceeds balance";
+  }
+
+  const revertedMatch = message.match(/reverted with the following reason:\s*(.+)/i);
+  if (revertedMatch?.[1]) {
+    return revertedMatch[1].trim();
+  }
+
+  return message || "Unknown Arc settlement error";
 }
 
 /**

@@ -119,10 +119,21 @@ class ApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        const bodyError = errorData.error ?? errorData.message;
+        let message = `HTTP ${response.status}`;
+        let code = errorData.code;
+
+        if (typeof bodyError === "string") {
+          message = bodyError;
+        } else if (bodyError && typeof bodyError === "object") {
+          message = bodyError.message || message;
+          code = bodyError.code || code;
+        }
+
         return {
           error: {
-            message: errorData.message || `HTTP ${response.status}`,
-            code: errorData.code,
+            message,
+            code,
             details: errorData,
           },
         };

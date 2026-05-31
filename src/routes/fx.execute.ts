@@ -38,6 +38,7 @@ import {
 } from "@/server/services/transaction-journal";
 import { enforceRateLimit, getCorsHeaders } from "@/server/utils/security";
 import { logger } from "@/backend/utils/logger";
+import { formatErrorResponse } from "@/backend/utils/errors";
 
 const Body = z.object({
   userId: z.string().optional(),
@@ -202,14 +203,14 @@ export const Route = createFileRoute("/fx/execute")({
             }
           }
 
-          return Response.json(
-            {
-              status: "failed",
-              transactionId: txId,
-              error: errorMsg,
+          const { statusCode, body } = formatErrorResponse(error);
+          return new Response(JSON.stringify(body), {
+            status: statusCode,
+            headers: {
+              ...CORS,
+              "Content-Type": "application/json",
             },
-            { status: 500, headers: CORS }
-          );
+          });
         }
       },
     },
