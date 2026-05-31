@@ -3,9 +3,6 @@
  * Provides authentication and wallet functionality on Arc testnet.
  */
 
-import { DynamicContextProvider } from "@dynamic-labs/sdk-react-core";
-import { EthereumWalletConnectors } from "@dynamic-labs/ethereum";
-// import { ViemExtension } from "@dynamic-labs/viem-extension";
 import type { EvmNetwork, GenericNetwork } from "@dynamic-labs/types";
 import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
@@ -15,11 +12,30 @@ interface DynamicProviderProps {
   children: ReactNode;
 }
 
+interface DynamicProviderModules {
+  DynamicContextProvider: any;
+  EthereumWalletConnectors: any;
+}
+
 export function DynamicProvider({ children }: DynamicProviderProps) {
   const [isClient, setIsClient] = useState(false);
+  const [modules, setModules] = useState<DynamicProviderModules | null>(null);
 
   useEffect(() => {
     setIsClient(true);
+    Promise.all([
+      import("@dynamic-labs/sdk-react-core"),
+      import("@dynamic-labs/ethereum"),
+    ])
+      .then(([sdk, ethereum]) => {
+        setModules({
+          DynamicContextProvider: sdk.DynamicContextProvider,
+          EthereumWalletConnectors: ethereum.EthereumWalletConnectors,
+        });
+      })
+      .catch((error) => {
+        console.error("[DynamicProvider] Failed to load Dynamic Labs modules:", error);
+      });
   }, []);
 
   // Support both VITE_ prefixed env and plain DYNAMIC_ENVIRONMENT_ID.
@@ -61,10 +77,12 @@ export function DynamicProvider({ children }: DynamicProviderProps) {
     return <>{children}</>;
   }
 
-  // Only render on client to avoid SSR issues with ViemExtension
-  if (!isClient) {
+  // Only render on client to avoid SSR issues with Dynamic Labs initialization.
+  if (!isClient || !modules) {
     return <>{children}</>;
   }
+
+  const { DynamicContextProvider, EthereumWalletConnectors } = modules;
 
   try {
     return (
@@ -85,7 +103,6 @@ export function DynamicProvider({ children }: DynamicProviderProps) {
     );
   } catch (error) {
     console.error("[DynamicProvider] Error initializing Dynamic:", error);
-    // Fallback: render children without Dynamic provider
     return <>{children}</>;
   }
 }
