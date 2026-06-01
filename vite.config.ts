@@ -9,6 +9,9 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   vite: {
     build: {
+      // Prevent Vite from trying to remove the `dist` output directory.
+      // This works around permission/lock issues on Windows when `.wrangler` is held open.
+      emptyOutDir: false,
       rollupOptions: {
         output: {
           // Let Vite/Rollup auto-split wallet dependencies to avoid manual chunk cycles.

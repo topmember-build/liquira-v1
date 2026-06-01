@@ -13,6 +13,7 @@ import { Route as TxRouteImport } from './routes/tx'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as PaymentRouteImport } from './routes/payment'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as FaviconRouteImport } from './routes/favicon'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as BetaAccessRouteImport } from './routes/beta-access'
 import { Route as AccountRouteImport } from './routes/account'
@@ -57,6 +58,11 @@ const PaymentRoute = PaymentRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaviconRoute = FaviconRouteImport.update({
+  id: '/favicon',
+  path: '/favicon',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DocsRoute = DocsRouteImport.update({
@@ -190,6 +196,7 @@ export interface FileRoutesByFullPath {
   '/account': typeof AccountRouteWithChildren
   '/beta-access': typeof BetaAccessRoute
   '/docs': typeof DocsRouteWithChildren
+  '/favicon': typeof FaviconRoute
   '/login': typeof LoginRoute
   '/payment': typeof PaymentRoute
   '/stats': typeof StatsRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/beta-access': typeof BetaAccessRoute
   '/docs': typeof DocsRouteWithChildren
+  '/favicon': typeof FaviconRoute
   '/login': typeof LoginRoute
   '/payment': typeof PaymentRoute
   '/stats': typeof StatsRoute
@@ -252,6 +260,7 @@ export interface FileRoutesById {
   '/account': typeof AccountRouteWithChildren
   '/beta-access': typeof BetaAccessRoute
   '/docs': typeof DocsRouteWithChildren
+  '/favicon': typeof FaviconRoute
   '/login': typeof LoginRoute
   '/payment': typeof PaymentRoute
   '/stats': typeof StatsRoute
@@ -285,6 +294,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/beta-access'
     | '/docs'
+    | '/favicon'
     | '/login'
     | '/payment'
     | '/stats'
@@ -315,6 +325,7 @@ export interface FileRouteTypes {
     | '/'
     | '/beta-access'
     | '/docs'
+    | '/favicon'
     | '/login'
     | '/payment'
     | '/stats'
@@ -346,6 +357,7 @@ export interface FileRouteTypes {
     | '/account'
     | '/beta-access'
     | '/docs'
+    | '/favicon'
     | '/login'
     | '/payment'
     | '/stats'
@@ -378,6 +390,7 @@ export interface RootRouteChildren {
   AccountRoute: typeof AccountRouteWithChildren
   BetaAccessRoute: typeof BetaAccessRoute
   DocsRoute: typeof DocsRouteWithChildren
+  FaviconRoute: typeof FaviconRoute
   LoginRoute: typeof LoginRoute
   PaymentRoute: typeof PaymentRoute
   StatsRoute: typeof StatsRoute
@@ -422,6 +435,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/favicon': {
+      id: '/favicon'
+      path: '/favicon'
+      fullPath: '/favicon'
+      preLoaderRoute: typeof FaviconRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/docs': {
@@ -654,6 +674,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountRoute: AccountRouteWithChildren,
   BetaAccessRoute: BetaAccessRoute,
   DocsRoute: DocsRouteWithChildren,
+  FaviconRoute: FaviconRoute,
   LoginRoute: LoginRoute,
   PaymentRoute: PaymentRoute,
   StatsRoute: StatsRoute,
