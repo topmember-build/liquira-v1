@@ -70,27 +70,9 @@ function createSupabaseAdminClient() {
   const SUPABASE_SERVICE_ROLE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    console.warn("[Supabase] Admin client not configured: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is missing.");
-    const noopResponse = Promise.resolve({ data: null, error: null });
-    const noopFunction = () => noopResponse;
-    const handler: ProxyHandler<any> = {
-      get: () => new Proxy(noopFunction, handler),
-      apply: () => noopResponse,
-    };
-
-    return new Proxy({
-      from: new Proxy(noopFunction, handler),
-      rpc: new Proxy(noopFunction, handler),
-      storage: new Proxy(noopFunction, handler),
-      auth: new Proxy(noopFunction, handler),
-    }, {
-      get: (target, prop) => {
-        if (prop in target) {
-          return Reflect.get(target, prop);
-        }
-        return new Proxy(noopFunction, handler);
-      },
-    }) as unknown as ReturnType<typeof createClient>;
+    throw new Error(
+      "[Supabase] Admin client not configured: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY must be set in the deployment environment."
+    );
   }
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
