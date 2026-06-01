@@ -97,7 +97,13 @@ function RootComponent() {
                 <BetaAccessProvider>
                   <WalletProvider>
                     <PaymentProvider>
-                      <Suspense>
+                      <Suspense
+                        fallback={
+                          <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+                            Loading app...
+                          </div>
+                        }
+                      >
                         <Outlet />
                       </Suspense>
                     </PaymentProvider>

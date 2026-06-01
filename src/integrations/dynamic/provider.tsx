@@ -5,7 +5,7 @@
 
 import type { EvmNetwork, GenericNetwork } from "@dynamic-labs/types";
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { arcTestnet } from "@/lib/arc-testnet";
 
 interface DynamicProviderProps {
@@ -15,6 +15,17 @@ interface DynamicProviderProps {
 interface DynamicProviderModules {
   DynamicContextProvider: any;
   EthereumWalletConnectors: any;
+}
+
+interface DynamicReadyState {
+  sdkReady: boolean;
+}
+
+const DynamicReadyContext = createContext<DynamicReadyState | null>(null);
+
+export function useDynamicReady() {
+  const ctx = useContext(DynamicReadyContext);
+  return ctx ?? { sdkReady: false };
 }
 
 export function DynamicProvider({ children }: DynamicProviderProps) {
@@ -74,35 +85,49 @@ export function DynamicProvider({ children }: DynamicProviderProps) {
       "Missing Dynamic environment variable. Dynamic Labs wallet support will be disabled. " +
         "Set VITE_DYNAMIC_ENVIRONMENT_ID or DYNAMIC_ENVIRONMENT_ID (in .env.local) to enable it."
     );
-    return <>{children}</>;
+    return (
+      <DynamicReadyContext.Provider value={{ sdkReady: false }}>
+        {children}
+      </DynamicReadyContext.Provider>
+    );
   }
 
   // Only render on client to avoid SSR issues with Dynamic Labs initialization.
   if (!isClient || !modules) {
-    return <>{children}</>;
+    return (
+      <DynamicReadyContext.Provider value={{ sdkReady: false }}>
+        {children}
+      </DynamicReadyContext.Provider>
+    );
   }
 
   const { DynamicContextProvider, EthereumWalletConnectors } = modules;
 
   try {
     return (
-      <DynamicContextProvider
-        settings={{
-          environmentId,
-          flowNetwork: "testnet",
-          walletConnectors: [EthereumWalletConnectors],
-          walletConnectPreferredChains: [`eip155:${arcTestnet.id}`],
-          // extensions: [new ViemExtension()],
-          overrides: {
-            evmNetworks: arcNetworkOverrides,
-          },
-        }}
-      >
-        {children}
-      </DynamicContextProvider>
+      <DynamicReadyContext.Provider value={{ sdkReady: true }}>
+        <DynamicContextProvider
+          settings={{
+            environmentId,
+            flowNetwork: "testnet",
+            walletConnectors: [EthereumWalletConnectors],
+            walletConnectPreferredChains: [`eip155:${arcTestnet.id}`],
+            // extensions: [new ViemExtension()],
+            overrides: {
+              evmNetworks: arcNetworkOverrides,
+            },
+          }}
+        >
+          {children}
+        </DynamicContextProvider>
+      </DynamicReadyContext.Provider>
     );
   } catch (error) {
     console.error("[DynamicProvider] Error initializing Dynamic:", error);
-    return <>{children}</>;
+    return (
+      <DynamicReadyContext.Provider value={{ sdkReady: false }}>
+        {children}
+      </DynamicReadyContext.Provider>
+    );
   }
 }

@@ -2,6 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { LogOut, User as UserIcon, Wallet as WalletIcon, Sun, Moon, Menu, X } from "lucide-react";
 import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { useDynamicReady } from "@/integrations/dynamic/provider";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { CHAINS } from "@/lib/stables";
@@ -242,6 +243,7 @@ function WalletButton() {
   const [isClient, setIsClient] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const { sdkReady } = useDynamicReady();
 
   useEffect(() => {
     setIsClient(true);
@@ -255,8 +257,8 @@ function WalletButton() {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  // Render a minimal, non-Dynamic-dependent UI during SSR/hydration.
-  if (!isClient) {
+  // Render a minimal, non-Dynamic-dependent UI during SSR/hydration or while the Dynamic SDK is initializing.
+  if (!isClient || !sdkReady) {
     return (
       <div ref={ref} className="relative">
         <button

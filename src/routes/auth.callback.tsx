@@ -12,8 +12,12 @@ function AuthCallback() {
     // Lovable OAuth helper sets the session before redirect lands here, but in
     // case the URL contains a code/hash we wait briefly for state to settle.
     const t = setTimeout(async () => {
+      const redirect =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("redirect") ?? "/account"
+          : "/account";
       const { data } = await supabase.auth.getSession();
-      navigate({ to: data.session ? "/account" : "/login" });
+      navigate({ to: data.session ? redirect : "/login" });
     }, 200);
     return () => clearTimeout(t);
   }, [navigate]);

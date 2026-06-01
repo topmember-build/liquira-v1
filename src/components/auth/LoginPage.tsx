@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { Header } from "@/components/site/Header";
+import { getAuthCallbackUrl, getAccountRedirectUrl } from "@/lib/auth";
 
 export function LoginPage() {
   const redirect =
@@ -25,14 +26,14 @@ export function LoginPage() {
       if (!hasSupabaseOAuth) {
         throw new Error("OAuth is not configured");
       }
-      
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirect)}`,
+          redirectTo: getAuthCallbackUrl(redirect),
         },
       });
-      
+
       if (error) throw error;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Google sign-in failed");
@@ -46,7 +47,7 @@ export function LoginPage() {
     try {
       if (!hasSupabaseAuth || !hasSupabaseSignup) {
         const result = await lovable.auth.signInWithOAuth("lovable", {
-          redirect_uri: window.location.origin + "/auth/callback",
+          redirect_uri: getAuthCallbackUrl(),
         });
         if (result.error) throw result.error;
         if (!result.redirected) {
@@ -64,7 +65,7 @@ export function LoginPage() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin + "/account" },
+          options: { emailRedirectTo: getAccountRedirectUrl() },
         });
         if (error) throw error;
         toast.success("Check your email to confirm your account");
