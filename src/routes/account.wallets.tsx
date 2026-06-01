@@ -89,9 +89,18 @@ function WalletsPage() {
         const message =
           typeof response === "string"
             ? response
-            : typedResponse?.message ?? typedResponse?.result?.message;
+            : typedResponse?.message ??
+              typedResponse?.result?.message ??
+              typedResponse?.data?.message ??
+              typedResponse?.data?.result?.message;
         if (!message || typeof message !== "string") {
-          throw new Error("Wallet challenge generation failed. Please try again.");
+          const errorMessage =
+            typedResponse?.error?.message ||
+            typedResponse?.error ||
+            typedResponse?.data?.error?.message ||
+            typedResponse?.data?.error ||
+            "Wallet challenge generation failed. Please try again.";
+          throw new Error(typeof errorMessage === "string" ? errorMessage : "Wallet challenge generation failed. Please try again.");
         }
         
         setChallenge(message);
@@ -191,10 +200,19 @@ function WalletsPage() {
       const message =
         typeof response === "string"
           ? response
-          : typedResponse?.message ?? typedResponse?.result?.message;
+          : typedResponse?.message ??
+            typedResponse?.result?.message ??
+            typedResponse?.data?.message ??
+            typedResponse?.data?.result?.message;
       if (!message || typeof message !== "string") {
         console.error("[Wallets] invalid nonce response", response);
-        throw new Error("Wallet challenge generation failed. Please try again.");
+        const errorMessage =
+          typedResponse?.error?.message ||
+          typedResponse?.error ||
+          typedResponse?.data?.error?.message ||
+          typedResponse?.data?.error ||
+          "Wallet challenge generation failed. Please try again.";
+        throw new Error(typeof errorMessage === "string" ? errorMessage : "Wallet challenge generation failed. Please try again.");
       }
       console.log("[Wallets] challenge:", message);
       toast.success("Challenge generated — please sign in your wallet");

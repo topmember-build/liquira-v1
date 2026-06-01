@@ -58,13 +58,18 @@ export const requestWalletNonce = createServerFn({ method: "POST" })
       `Issued At: ${issued}`,
     ].join("\n");
 
-    await supabaseAdmin.from("wallet_link_nonces").insert({
+    const { error: insertError } = await supabaseAdmin.from("wallet_link_nonces").insert({
       user_id: userId,
       address: addr,
       nonce,
       message,
       expires_at: expiresAt,
     });
+
+    if (insertError) {
+      console.error("[Wallets] failed to persist nonce:", insertError);
+      throw new Error(insertError.message || "Failed to generate wallet challenge. Please try again.");
+    }
 
     return { message, nonce };
   });
@@ -131,7 +136,11 @@ export const verifyAndLinkWallet = createServerFn({ method: "POST" })
       .single();
     if (insErr) throw new Error(insErr.message);
 
-    await supabaseAdmin.from("wallet_link_nonces").update({ consumed_at: new Date().toISOString() }).eq("id", row.id);
+    const { error: consumeError } = await supabaseAdmin.from("wallet_link_nonces").update({ consumed_at: new Date().toISOString() }).eq("id", row.id);
+    if (consumeError) {
+      console.error("[Wallets] failed to consume nonce:", consumeError);
+      throw new Error(consumeError.message || "Failed to complete wallet verification. Please try again.");
+    }
 
     await supabaseAdmin.rpc("notify_user", {
       _user_id: userId,
