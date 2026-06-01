@@ -203,6 +203,8 @@ Create a `.env.local` file with:
 ```env
 # Supabase
 VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=your_publishable_key
+# or alias for projects still using the legacy anon key name
 VITE_SUPABASE_ANON_KEY=your_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 

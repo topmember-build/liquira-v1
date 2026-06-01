@@ -68,7 +68,9 @@ export function LoginPage() {
           options: { emailRedirectTo: getAccountRedirectUrl() },
         });
         if (error) throw error;
-        toast.success("Check your email to confirm your account");
+        toast.success(
+          "Check your email to confirm your account. If you do not receive it, check your spam folder and ensure Supabase email delivery is configured."
+        );
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Authentication failed");
