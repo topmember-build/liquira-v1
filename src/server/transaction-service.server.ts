@@ -51,72 +51,32 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 let supabase: ReturnType<typeof createClient<Database>> | null = null;
 
-if (supabaseUrl && supabaseServiceKey) {
-  supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-    auth: { persistSession: false },
-  });
-} else {
-  console.warn("[Transaction Service] Supabase config missing - using in-memory storage only");
-}
-
-const supabaseConfigured = !!supabase;
+const supabaseConfigured = Boolean(supabaseUrl && supabaseServiceKey);
 let supabaseAvailable = supabaseConfigured;
 let supabaseUnavailableReason: string | null = null;
 
-/**
- * Test Supabase connectivity on startup.
- */
-async function testSupabaseConnection(): Promise<boolean> {
-  if (!supabase) {
-    return false;
+function createSupabaseClientInstance() {
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return null;
   }
 
-  try {
-    const { error } = await getSupabaseClient().from("fx_transactions" as any).select("id").limit(1);
-    if (error) {
-      if (error.code === "PGRST205") {
-        supabaseUnavailableReason =
-          "Supabase table 'public.fx_transactions' not found. Apply the migration for fx_transactions.";
-        console.error("[Transaction Service] Supabase connection test failed:", supabaseUnavailableReason);
-      } else {
-        supabaseUnavailableReason =
-          `Supabase connection failed: ${error.message || JSON.stringify(error)}`;
-        console.error("[Transaction Service] Supabase connection test failed:", error);
-      }
-      return false;
-    }
-    console.log("[Transaction Service] Supabase connection OK");
-    return true;
-  } catch (err) {
-    supabaseUnavailableReason =
-      `Supabase connection failed: ${err instanceof Error ? err.message : String(err)}`;
-    console.error("[Transaction Service] Supabase connection test failed:", err);
-    return false;
-  }
+  return createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: { persistSession: false },
+  });
 }
 
 function getSupabaseClient() {
+  if (!supabase) {
+    supabase = createSupabaseClientInstance();
+  }
   if (!supabase) {
     throw new Error("[Transaction Service] Supabase is not configured");
   }
   return supabase;
 }
 
-// Test connection on module load only if Supabase is configured
-if (supabase) {
-  testSupabaseConnection().then((available) => {
-    supabaseAvailable = available;
-    if (!available) {
-      console.warn("[Transaction Service] Using in-memory storage fallback");
-    }
-  }).catch((err) => {
-    supabaseAvailable = false;
-    supabaseUnavailableReason =
-      `Supabase connection test failed: ${err instanceof Error ? err.message : String(err)}`;
-    console.warn("[Transaction Service] Using in-memory storage fallback");
-  });
-} else {
-  console.warn("[Transaction Service] Supabase not configured - using in-memory storage only");
+if (!supabaseConfigured) {
+  console.warn("[Transaction Service] Supabase config missing - using in-memory storage only");
 }
 
 function getUnavailableSupabaseReason() {
