@@ -37,6 +37,30 @@ function WalletsPage() {
   const [challenge, setChallenge] = useState<string | null>(null);
   const [walletType, setWalletType] = useState<"wagmi" | "dynamic" | null>(null);
 
+  const getServerFnResultMessage = (response: unknown): string | undefined => {
+    if (typeof response === "string") return response;
+    const typed = response as Record<string, unknown>;
+    return (
+      (typed?.message as string | undefined) ??
+      (typed?.result as Record<string, unknown> | undefined)?.message as string | undefined ??
+      (typed?.data as Record<string, unknown> | undefined)?.message as string | undefined ??
+      (typed?.data as Record<string, unknown> | undefined)?.result?.message as string | undefined ??
+      (typed?.response as Record<string, unknown> | undefined)?.data?.message as string | undefined
+    );
+  };
+
+  const getServerFnErrorMessage = (response: unknown): string | undefined => {
+    if (typeof response === "string") return response;
+    const typed = response as Record<string, unknown>;
+    return (
+      (typed?.error as string | undefined) ??
+      (typed?.error as Record<string, unknown> | undefined)?.message as string | undefined ??
+      (typed?.data as Record<string, unknown> | undefined)?.error?.message as string | undefined ??
+      (typed?.data as Record<string, unknown> | undefined)?.error as string | undefined ??
+      (typed?.data as Record<string, unknown> | undefined)?.result?.error?.message as string | undefined
+    );
+  };
+
   const load = async () => {
     if (!user) return;
     setLoading(true);
@@ -56,7 +80,8 @@ function WalletsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  const startLink = async () => {
+  const startLink = async (overrideWalletType?: "wagmi" | "dynamic") => {
+    const currentWalletType = overrideWalletType ?? walletType;
     if (!user || !session) {
       toast.error("Please sign in to your account before linking a wallet.");
       return;
@@ -72,7 +97,7 @@ function WalletsPage() {
     }
 
     // Handle Dynamic wallet linking
-    if (walletType === "dynamic") {
+    if (currentWalletType === "dynamic") {
       if (!dynamicWallet?.address) {
         toast.error("No Dynamic wallet connected. Please create or connect a Dynamic wallet first.");
         return;
@@ -85,22 +110,11 @@ function WalletsPage() {
           data: { address: dynamicWallet.address, chain: "arc-testnet" },
           headers: authHeaders,
         });
-        const typedResponse = response as any;
-        const message =
-          typeof response === "string"
-            ? response
-            : typedResponse?.message ??
-              typedResponse?.result?.message ??
-              typedResponse?.data?.message ??
-              typedResponse?.data?.result?.message;
-        if (!message || typeof message !== "string") {
-          const errorMessage =
-            typedResponse?.error?.message ||
-            typedResponse?.error ||
-            typedResponse?.data?.error?.message ||
-            typedResponse?.data?.error ||
-            "Wallet challenge generation failed. Please try again.";
-          throw new Error(typeof errorMessage === "string" ? errorMessage : "Wallet challenge generation failed. Please try again.");
+        const message = getServerFnResultMessage(response);
+        if (!message) {
+          const errorMessage = getServerFnErrorMessage(response) ?? "Wallet challenge generation failed. Please try again.";
+          console.error("[Wallets] requestWalletNonce unexpected response:", response);
+          throw new Error(errorMessage);
         }
         
         setChallenge(message);
@@ -196,23 +210,11 @@ function WalletsPage() {
         data: { address: wallet.address, chain: wallet.chainId },
         headers: authHeaders,
       });
-      const typedResponse = response as any;
-      const message =
-        typeof response === "string"
-          ? response
-          : typedResponse?.message ??
-            typedResponse?.result?.message ??
-            typedResponse?.data?.message ??
-            typedResponse?.data?.result?.message;
-      if (!message || typeof message !== "string") {
+      const message = getServerFnResultMessage(response);
+      if (!message) {
+        const errorMessage = getServerFnErrorMessage(response) ?? "Wallet challenge generation failed. Please try again.";
         console.error("[Wallets] invalid nonce response", response);
-        const errorMessage =
-          typedResponse?.error?.message ||
-          typedResponse?.error ||
-          typedResponse?.data?.error?.message ||
-          typedResponse?.data?.error ||
-          "Wallet challenge generation failed. Please try again.";
-        throw new Error(typeof errorMessage === "string" ? errorMessage : "Wallet challenge generation failed. Please try again.");
+        throw new Error(errorMessage);
       }
       console.log("[Wallets] challenge:", message);
       toast.success("Challenge generated — please sign in your wallet");
@@ -370,7 +372,7 @@ function WalletsPage() {
               <button
                 onClick={() => {
                   setWalletType("dynamic");
-                  startLink();
+                  void startLink("dynamic");
                 }}
                 disabled={!dynamicWallet?.address || !dynamicSDKLoaded}
                 className="border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-widest text-foreground hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50"

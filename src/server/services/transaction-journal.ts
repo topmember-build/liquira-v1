@@ -109,6 +109,22 @@ export async function notifyTransactionStatus(
         "/account/history",
         metadata
       );
+    } else {
+      console.debug(
+        "[Transaction Journal] No sender user available for pending payment notification",
+        { transactionId: transaction.transactionId, walletAddress: transaction.walletAddress }
+      );
+    }
+
+    if (recipientUserId && recipientUserId !== senderUserId) {
+      await sendUserNotification(
+        recipientUserId,
+        "payment.pending",
+        "Incoming payment",
+        `Incoming payment of ${transaction.toAmount} ${transaction.toCurrency} is being processed.`,
+        "/account/history",
+        metadata
+      );
     }
     return;
   }
@@ -123,6 +139,11 @@ export async function notifyTransactionStatus(
         "/account/history",
         metadata
       );
+    } else {
+      console.debug(
+        "[Transaction Journal] No sender user available for success notification",
+        { transactionId: transaction.transactionId, walletAddress: transaction.walletAddress }
+      );
     }
 
     if (recipientUserId && recipientUserId !== senderUserId) {
@@ -133,6 +154,11 @@ export async function notifyTransactionStatus(
         `Received ${transaction.toAmount} ${transaction.toCurrency} from ${transaction.walletAddress ?? "another wallet"}`,
         "/account/history",
         metadata
+      );
+    } else if (transaction.recipientAddress && !recipientUserId) {
+      console.debug(
+        "[Transaction Journal] No recipient user available for success notification",
+        { transactionId: transaction.transactionId, recipientAddress: transaction.recipientAddress }
       );
     }
     return;
