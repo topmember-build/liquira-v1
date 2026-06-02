@@ -76,7 +76,11 @@ export function Header() {
       </div>
 
       {mobileOpen && (
-        <div ref={mobileMenuRef} className="absolute inset-x-0 top-full z-50 border-t border-border bg-background/95 p-4 shadow-xl backdrop-blur-sm md:hidden">
+        <div
+          ref={mobileMenuRef}
+          className="fixed inset-x-0 top-14 bottom-0 z-50 border-t border-border bg-background/95 p-4 shadow-xl backdrop-blur-sm overflow-auto md:hidden"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
           <nav className="grid gap-3">
             <a
               href="#router"

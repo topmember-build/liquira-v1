@@ -79,7 +79,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
-        <Toaster position="bottom-right" richColors closeButton />
+        <Toaster position="bottom-center" richColors closeButton />
         <Scripts />
       </body>
     </html>

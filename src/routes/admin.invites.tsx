@@ -352,7 +352,7 @@ function AdminInvitesPage() {
 
             <button
               type="submit"
-              className="inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2"
+              className="w-full md:w-auto inline-flex items-center justify-center rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2"
               disabled={loading}
             >
               {loading ? "Creating codes…" : "Create invite codes"}
@@ -372,7 +372,7 @@ function AdminInvitesPage() {
               <button
                 type="button"
                 onClick={() => fetchCodes(adminToken)}
-                className="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-accent"
+                className="w-full md:w-auto rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-accent"
               >
                 Refresh
               </button>
