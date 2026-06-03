@@ -28,7 +28,7 @@ function DocsLayout() {
       <Header />
       <main>
         <section className="border-b border-border bg-surface-1">
-          <div className="mx-auto max-w-[1400px] px-6 py-20">
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-20">
             <div className="max-w-4xl">
               <div className="text-mono-label">/ DOCUMENTATION</div>
               <h1 className="mt-3 text-[clamp(2.75rem,5vw,4.5rem)] leading-[1.02] font-medium tracking-[-0.03em]">
@@ -55,7 +55,7 @@ function DocsLayout() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1400px] px-6 py-20">
+        <section className="mx-auto max-w-[1400px] px-4 sm:px-6 py-20">
           <div className="grid gap-14 lg:grid-cols-[1fr,280px]">
             <div className="space-y-20">
               <article id="overview" className="space-y-8">

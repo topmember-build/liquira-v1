@@ -115,7 +115,7 @@ export function StatsPanel({ compact = false, embed = false }: { compact?: boole
 
   if (!data || !totals || !series) {
     return (
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="h-24 animate-pulse-soft border border-border bg-surface-1" />
         ))}
@@ -152,7 +152,7 @@ export function StatsPanel({ compact = false, embed = false }: { compact?: boole
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile label="TVL" value={formatUsd(totals.tvlUsd * 1_000_000, { compact: true })} delta="+2.4% 24h" series={series.tvl} />
         <StatTile label="24H VOLUME" value={formatUsd(totals.vol24hUsd * 1_000_000, { compact: true })} delta="+8.1%" series={series.vol} />
         <StatTile label="AVG SLIPPAGE" value={`${totals.avgSlippageBps.toFixed(2)} bps`} series={series.slip} destructive />

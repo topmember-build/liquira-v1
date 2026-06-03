@@ -4,7 +4,7 @@ import { StatsPanel } from "./StatsPanel";
 export function Analytics() {
   return (
     <section id="analytics" className="border-t border-border bg-surface-1/30">
-      <div className="mx-auto max-w-[1400px] px-6 py-24">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-24">
         <SectionHeader eyebrow="/ ANALYTICS" tag="04 · telemetry" />
         <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
           <div>

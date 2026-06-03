@@ -24,7 +24,7 @@ function StatsPage() {
       <StatusBar />
       <main>
         <section className="border-t border-border">
-          <div className="mx-auto max-w-[1400px] px-6 py-16">
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-16">
             <div className="text-mono-label">/ STATS</div>
             <h1 className="mt-3 max-w-3xl text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.05] font-medium tracking-[-0.02em]">
               Live <span className="font-serif-italic text-primary">testnet</span> telemetry.

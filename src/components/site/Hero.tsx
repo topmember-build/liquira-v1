@@ -18,7 +18,7 @@ export function Hero() {
   return (
     <section className="bg-radial-mint relative overflow-hidden">
       <div className="bg-grid bg-grid-fade absolute inset-0 opacity-50" />
-      <div className="relative mx-auto grid max-w-[1400px] gap-12 px-6 pt-20 pb-24 lg:grid-cols-[1.15fr,1fr] lg:gap-10">
+      <div className="relative mx-auto grid max-w-[1400px] gap-12 px-4 sm:px-6 pt-20 pb-24 lg:grid-cols-[1.15fr,1fr] lg:gap-10">
         {/* Left: copy + command bar */}
         <div className="relative">
           <div className="mb-8 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">

@@ -28,7 +28,7 @@ function Spark() {
 export function Pools() {
   return (
     <section id="pools" className="border-t border-border">
-      <div className="mx-auto max-w-[1400px] px-6 py-24">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-24">
         <SectionHeader eyebrow="/ POOLS" tag="03 · liquidity" />
         <div className="mt-4 flex flex-wrap items-end justify-between gap-6">
           <div>
@@ -46,7 +46,7 @@ export function Pools() {
         </div>
 
         <div className="mt-10 overflow-x-auto border border-border">
-          <table className="w-full min-w-[820px] font-mono text-[12px]">
+          <table className="w-full min-w-[760px] font-mono text-[12px]">
             <thead className="bg-surface-1 text-mono-label" style={{ fontSize: 10 }}>
               <tr>
                 {["", "PAIR", "7D TREND", "TVL", "24H VOL", "FEE", "APR", "UTIL"].map((h) => (

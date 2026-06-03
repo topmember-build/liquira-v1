@@ -30,7 +30,7 @@ const CODE_LINES = [
 export function Developers() {
   return (
     <section id="developers" className="border-t border-border">
-      <div className="mx-auto max-w-[1400px] px-6 py-24">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-24">
         <SectionHeader eyebrow="/ DEVELOPERS" tag="05 · sdk" />
         <div className="mt-4 grid gap-10 lg:grid-cols-[1fr,1.2fr]">
           <div>
@@ -99,9 +99,9 @@ export function Developers() {
                   </div>
                 ))}
               </pre>
-              <div className="grid grid-cols-3 border-t border-border">
+              <div className="grid grid-cols-1 gap-3 border-t border-border sm:grid-cols-3">
                 {[["P50 QUOTE", "12 ms"], ["SETTLE", "0.41 s"], ["SLIPPAGE", "0.71 bps"]].map(([l, v], i) => (
-                  <div key={l} className={"p-4 " + (i < 2 ? "border-r border-border" : "")}>
+                  <div key={l} className={"p-4 " + (i < 2 ? "sm:border-r border-border" : "")}>
                     <div className="text-mono-label" style={{ fontSize: 10 }}>{l}</div>
                     <div className="mt-1 font-mono text-lg">{v}</div>
                   </div>

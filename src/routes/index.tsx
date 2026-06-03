@@ -36,7 +36,7 @@ function LandingPage() {
         <RouterSection />
         <Pools />
         <section className="border-t border-border">
-          <div className="mx-auto max-w-[1400px] px-6 py-16">
+          <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-16">
             <StatsPanel compact />
           </div>
         </section>

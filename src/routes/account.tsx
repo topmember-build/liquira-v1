@@ -28,7 +28,7 @@ function AccountLayout() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Header />
-      <main className="mx-auto max-w-[1200px] px-6 py-8">
+      <main className="mx-auto max-w-[1200px] px-4 sm:px-6 py-8">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6">
           <div>
             <div className="text-mono-label" style={{ fontSize: 10 }}>

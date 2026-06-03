@@ -16,7 +16,7 @@ import { validateWalletAddress } from "@/lib/validation";
 export function RouterSection() {
   return (
     <section id="router" className="border-t border-border bg-surface-1/30">
-      <div className="mx-auto max-w-[1400px] px-6 py-24">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-24">
         <SectionHeader eyebrow="/ ROUTER" tag="02 · router" />
         <div className="mt-4 grid gap-10 lg:grid-cols-[1fr,auto] lg:items-end">
           <h2 className="max-w-3xl text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.05] font-medium tracking-[-0.02em]">
@@ -33,8 +33,8 @@ export function RouterSection() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-[1400px] px-6 pb-24">
-        <div className="grid gap-8 xl:grid-cols-[1.2fr,0.8fr]">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 pb-24">
+        <div className="grid gap-8 lg:grid-cols-[1.2fr,0.8fr]">
           <SwapPanel />
           <div className="space-y-6">
             <DepthChart />
@@ -423,7 +423,7 @@ const minReceived = estOut * (1 - slippageBps / 10_000);
               {quoting ? "refreshing…" : "from /fx/quote"}
             </span>
           </div>
-          <div className="grid grid-cols-3 gap-3 font-mono text-[11px]">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 font-mono text-[11px]">
             <div>
               <div className="text-mono-label" style={{ fontSize: 9 }}>RATE</div>
               <div className="tabular-nums">{rate ? rate.toFixed(6) : "—"}</div>
@@ -583,7 +583,7 @@ function DepthChart() {
         <span>-2.0%</span><span>-1.0%</span><span>mid</span><span>+1.0%</span><span>+2.0%</span>
       </div>
 
-      <div className="mt-4 grid grid-cols-4 border-t border-border pt-3">
+      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-3 sm:grid-cols-4">
         {[["SPREAD", "0.4 bps"], ["DEPTH ±1%", "$48.1M"], ["24H VOL", "$12.4M"], ["POOL FEE", "4 bps"]].map(([l, v]) => (
           <div key={l}>
             <div className="text-mono-label" style={{ fontSize: 10 }}>{l}</div>
@@ -694,7 +694,7 @@ function RouteTrace() {
         {numHops} {numHops === 1 ? "hop" : "hops"} · {route.settle}
       </div>
 
-      <div className="mt-5 grid grid-cols-4 border-t border-border pt-3 font-mono text-[12px]">
+      <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border pt-3 font-mono text-[12px] sm:grid-cols-4">
         {[
           ["HOPS", String(numHops)],
           ["NOTIONAL", route.notional],

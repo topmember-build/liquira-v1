@@ -28,7 +28,7 @@ const CAPS = [
 export function Capabilities() {
   return (
     <section className="border-t border-border">
-      <div className="mx-auto max-w-[1400px] px-6 py-24">
+      <div className="mx-auto max-w-[1400px] px-4 sm:px-6 py-24">
         <SectionHeader eyebrow="/ CAPABILITIES" tag="α · why" />
         <h2 className="mt-4 max-w-3xl text-[clamp(2rem,4.5vw,3.5rem)] leading-[1.05] font-medium tracking-[-0.02em]">
           Engineered for <span className="font-serif-italic text-primary">size.</span>
