@@ -79,7 +79,17 @@ export function useRealtimeTransactions(
         });
 
       return () => {
-        channel.unsubscribe();
+        // Use supabase.removeChannel to fully remove the channel and its callbacks.
+        try {
+          void supabase.removeChannel(channel);
+        } catch (err) {
+          // Fallback to unsubscribe if removeChannel is not available in this runtime
+          try {
+            channel.unsubscribe();
+          } catch (_) {
+            /* ignore */
+          }
+        }
       };
     } catch (error) {
       console.warn("[Realtime] Subscription setup failed:", error instanceof Error ? error.message : String(error));

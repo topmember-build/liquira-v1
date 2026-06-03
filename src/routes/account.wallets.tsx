@@ -106,10 +106,12 @@ function WalletsPage() {
       setStep("preparing");
       setChallenge(null);
       try {
+        console.debug("[Wallets] requestWalletNonce headers:", authHeaders);
         const response = await requestWalletNonce({
           data: { address: dynamicWallet.address, chain: "arc-testnet" },
           headers: authHeaders,
         });
+        console.debug("[Wallets] requestWalletNonce response:", response);
         const message = getServerFnResultMessage(response);
         if (!message) {
           const errorMessage = getServerFnErrorMessage(response) ?? "Wallet challenge generation failed. Please try again.";
@@ -206,10 +208,12 @@ function WalletsPage() {
     setStep("preparing");
     setChallenge(null);
     try {
+      console.debug("[Wallets] requestWalletNonce headers:", authHeaders);
       const response = await requestWalletNonce({
         data: { address: wallet.address, chain: wallet.chainId },
         headers: authHeaders,
       });
+      console.debug("[Wallets] requestWalletNonce response:", response);
       const message = getServerFnResultMessage(response);
       if (!message) {
         const errorMessage = getServerFnErrorMessage(response) ?? "Wallet challenge generation failed. Please try again.";
