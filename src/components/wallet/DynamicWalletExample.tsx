@@ -5,11 +5,11 @@
  * Users can connect, see their address, and sign transactions through Dynamic.
  */
 
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
 import { useEffect, useState } from "react";
+import { useDynamicWallet } from "@/hooks/use-dynamic-wallet";
 
 export function DynamicWalletExample() {
-  const { user, primaryWallet, sdkHasLoaded, handleLogOut } = useDynamicContext();
+  const { user, primaryWallet, sdkHasLoaded, handleLogOut } = useDynamicWallet();
   const [copied, setCopied] = useState(false);
 
   const handleCopyAddress = () => {

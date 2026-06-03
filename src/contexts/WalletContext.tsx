@@ -241,17 +241,28 @@ function InnerWalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(async () => {
     try {
-      if (typeof disconnectAsync === "function") {
-        await disconnectAsync();
-        return;
-      }
       if (connector && typeof connector.disconnect === "function") {
         await connector.disconnect();
         return;
       }
-      console.warn("[wallet] disconnect unavailable - no disconnect function found");
+      if (typeof disconnectAsync === "function") {
+        await disconnectAsync();
+        return;
+      }
+      console.warn("[wallet] disconnect unavailable - no disconnect function found", {
+        connector,
+        disconnectAsync: typeof disconnectAsync,
+      });
     } catch (error) {
-      console.warn("[wallet] disconnect failed", error);
+      console.warn("[wallet] disconnect failed", connector?.id ?? connector, error);
+      if (connector && typeof connector.disconnect === "function") {
+        try {
+          await connector.disconnect();
+          return;
+        } catch (innerError) {
+          console.warn("[wallet] connector.disconnect fallback failed", innerError);
+        }
+      }
     }
   }, [disconnectAsync, connector]);
 

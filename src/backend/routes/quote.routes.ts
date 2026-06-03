@@ -8,6 +8,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { quoteEngine } from "../services/quote-engine";
 import { routeOptimizer } from "../services/route-optimizer";
+import { quoteStore } from "../services/arc-store";
 import { validateInput, QuoteRequestSchema } from "../utils/validators";
 import { QuoteError } from "../utils/errors";
 import { logger } from "../utils/logger";
@@ -89,16 +90,27 @@ router.post(
         );
       }
 
+      const optimizedScoreMap = new Map(
+        optimizedQuotes.map((route) => [route.quoteId, route.score])
+      );
+
       // Build response
       const response: QuoteResponse = {
         transactionId,
-        quotes: acceptableQuotes.map((q, index) => ({
+        quotes: acceptableQuotes.map((q) => ({
           ...q,
-          score: optimizedQuotes[index]?.score || 0,
+          score: optimizedScoreMap.get(q.quoteId) ?? 0,
         })),
         selectedQuoteIndex: 0,
         timestamp: Date.now(),
       };
+
+      quoteStore.saveQuoteResponse(
+        transactionId,
+        request,
+        response.quotes,
+        response.selectedQuoteIndex
+      );
 
       logger.info("Quote response sent", {
         transactionId,
@@ -137,15 +149,9 @@ router.post(
 
       logger.info("Quote validation requested", { quoteId, transactionId });
 
-      // TODO: Implement quote validation logic
-      // - Check if quote is still fresh (< 5 minutes old)
-      // - Check if prices haven't changed drastically
-      // - Return validity and any updated information
+      const validation = quoteStore.validateQuote(transactionId, quoteId);
 
-      res.status(200).json({
-        valid: true,
-        message: "Quote is still valid",
-      });
+      res.status(200).json(validation);
     } catch (error) {
       next(error);
     }

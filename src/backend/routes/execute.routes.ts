@@ -7,10 +7,11 @@
  */
 
 import { Router, Request, Response, NextFunction } from "express";
-import { validateInput, ExecuteRequestSchema } from "../utils/validators";
+import { validateInput, ExecuteRequestSchema, ExecuteRequestInput } from "../utils/validators";
 import { ExecutionError, NotFoundError } from "../utils/errors";
 import { logger } from "../utils/logger";
-import { v4 as uuidv4 } from "uuid";
+import { quoteStore, executionStore } from "../services/arc-store";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const router = Router();
 
@@ -45,36 +46,105 @@ router.post(
       });
 
       // Validate request
-      const request = validateInput(ExecuteRequestSchema, req.body);
+      const request = validateInput(ExecuteRequestSchema, req.body) as ExecuteRequestInput;
 
-      // TODO: Implement execution logic
-      // 1. Fetch the quote from database
-      // 2. Validate the quote is still fresh
-      // 3. Build execution plan (via orchestrator)
-      // 4. Create ARC payload
-      // 5. Send to ARC (via webhook or direct API call)
-      // 6. Store execution state in database
-      // 7. Return execution ID and ARC payload
+      const quoteEntry = quoteStore.getQuoteEntry(request.transactionId);
+      if (!quoteEntry) {
+        throw new ExecutionError("Quote transaction not found", 404);
+      }
 
-      const executionId = uuidv4();
+      const quote = quoteStore.getQuote(request.transactionId, request.quoteId);
+      if (!quote) {
+        throw new ExecutionError("Quote not found for transaction", 404);
+      }
+
+      const validation = quoteStore.validateQuote(request.transactionId, request.quoteId);
+      if (!validation.valid) {
+        throw new ExecutionError(validation.message, 400);
+      }
+
+      const arcPayload = {
+        ...quote.arcPayload,
+        transactionId: request.transactionId,
+        recipient: request.userAddress,
+        metadata: {
+          ...(quote.arcPayload?.metadata || {}),
+          quoteId: quote.quoteId,
+        },
+      };
+
+      const execution = executionStore.createExecution(
+        request.transactionId,
+        request.quoteId,
+        arcPayload
+      );
+
+      try {
+        const normalizedAddress = request.userAddress.toLowerCase();
+        const { data: walletRow, error: walletError } = await supabaseAdmin
+          .from("user_wallets")
+          .select("user_id")
+          .eq("address", normalizedAddress)
+          .limit(1)
+          .maybeSingle();
+
+        if (walletError) {
+          logger.warn("Could not lookup wallet owner for swap persistence", {
+            error: walletError.message,
+            walletAddress: normalizedAddress,
+          });
+        }
+
+        if (walletRow?.user_id) {
+          const fromToken = quoteEntry.request.sourceToken;
+          const toToken = quoteEntry.request.destinationToken;
+          const fromChain = quoteEntry.request.sourceChain;
+          const toChain = quoteEntry.request.destinationChain;
+          const { error: swapError } = await supabaseAdmin
+            .from("swaps")
+            .upsert(
+              {
+                id: request.transactionId,
+                user_id: walletRow.user_id,
+                wallet_address: normalizedAddress,
+                quote_id: quote.quoteId,
+                status: "executing",
+                from_token: fromToken,
+                to_token: toToken,
+                from_chain: fromChain,
+                to_chain: toChain,
+                amount_in: quoteEntry.request.amount,
+                amount_out: quote.estimatedOutput,
+                route_legs: quote.route,
+                source: "api",
+              } as any,
+              { onConflict: "id" }
+            );
+
+          if (swapError) {
+            logger.warn("Failed to persist execution swap record", {
+              error: swapError.message,
+              transactionId: request.transactionId,
+            });
+          }
+        }
+      } catch (error) {
+        logger.warn("Execution persistence failed", {
+          error: error instanceof Error ? error.message : String(error),
+          transactionId: request.transactionId,
+        });
+      }
 
       const response = {
-        executionId,
+        executionId: execution.executionId,
         transactionId: request.transactionId,
-        status: "executing",
-        arcPayload: {
-          version: "1.0",
-          routeId: "route-placeholder",
-          transactionId: request.transactionId,
-          recipient: request.userAddress,
-          steps: [],
-          deadline: Math.floor(Date.now() / 1000) + 1800,
-        },
+        status: execution.status,
+        arcPayload: execution.arcPayload,
         estimatedCompletionTime: 300,
       };
 
       logger.info("Execute response sent", {
-        executionId,
+        executionId: execution.executionId,
         transactionId: request.transactionId,
       });
 
@@ -106,19 +176,31 @@ router.get(
   "/status/:executionId",
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { executionId } = req.params;
+      const executionId = Array.isArray(req.params.executionId)
+        ? req.params.executionId[0]
+        : req.params.executionId;
 
       logger.info("Execution status requested", { executionId });
 
-      // TODO: Implement status lookup
-      // 1. Fetch execution record from database
-      // 2. Check for updates from ARC webhooks
-      // 3. Return current status
+      const execution = executionStore.getExecution(executionId);
+      if (!execution) {
+        throw new NotFoundError("Execution not found");
+      }
 
       const response = {
         executionId,
-        status: "executing",
-        message: "Execution in progress",
+        transactionId: execution.transactionId,
+        status: execution.status,
+        currentStep: execution.currentStep ?? 0,
+        totalSteps: execution.totalSteps ?? 0,
+        progress:
+          execution.currentStep != null && execution.totalSteps != null
+            ? `${execution.currentStep}/${execution.totalSteps}`
+            : "pending",
+        createdAt: new Date(execution.createdAt).toISOString(),
+        updatedAt: new Date(execution.updatedAt).toISOString(),
+        txHash: execution.txHash,
+        error: execution.error,
       };
 
       res.status(200).json(response);

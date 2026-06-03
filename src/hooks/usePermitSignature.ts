@@ -7,7 +7,7 @@
 
 import { useCallback, useState } from "react";
 import { useSignTypedData, useAccount, useChainId, useSwitchChain } from "wagmi";
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { useDynamicWallet } from "@/hooks/use-dynamic-wallet";
 import { getAddress, createPublicClient, http } from "viem";
 import { calculatePermitDeadline, ERC2612_PERMIT_TYPES, getERC2612Domain } from "@/lib/permit2";
 import { arcTestnet } from "@/lib/arc-testnet";
@@ -36,7 +36,7 @@ export interface PermitSignResult {
 export function usePermitSignature() {
   const { signTypedDataAsync } = useSignTypedData();
   const { address: walletAddress, isConnected } = useAccount();
-  const { primaryWallet: dynamicWallet } = useDynamicContext();
+  const { primaryWallet: dynamicWallet } = useDynamicWallet();
   const evmChainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
   const [loading, setLoading] = useState(false);

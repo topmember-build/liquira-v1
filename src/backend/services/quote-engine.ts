@@ -298,9 +298,122 @@ export class QuoteEngine {
   private async fetchRelayQuote(request: QuoteRequest): Promise<NormalizedQuote> {
     logger.debug("Fetching Relay quote");
 
-    // TODO: Implement Relay API integration
-    // For now, return a mock quote
-    throw new Error("Relay integration not yet implemented");
+    if (!CONFIGURATION.PROVIDERS.RELAY.enabled) {
+      throw new Error("Relay provider is disabled by configuration");
+    }
+
+    if (!CONFIGURATION.PROVIDERS.RELAY.apiKey) {
+      throw new Error("Relay provider enabled but RELAY_API_KEY is not configured");
+    }
+
+    const sourceChainKey = CHAIN_MAPPINGS[request.sourceChain];
+    const destChainKey = CHAIN_MAPPINGS[request.destinationChain];
+
+    if (!sourceChainKey || !destChainKey) {
+      throw new Error(
+        `Unsupported chain mapping for ${request.sourceChain} or ${request.destinationChain}`
+      );
+    }
+
+    const response = await this.relayClient.post<any>("/quotes", {
+      sourceChain: sourceChainKey.native,
+      targetChain: destChainKey.native,
+      sourceToken: request.sourceToken,
+      targetToken: request.destinationToken,
+      amount: request.amount,
+      fromAddress: request.userAddress,
+      toAddress: request.userAddress,
+      maxSlippage: 1,
+    });
+
+    const relayQuote = response.data?.quote || response.data?.result || response.data;
+    if (!relayQuote) {
+      throw new Error("Relay returned an unexpected quote payload");
+    }
+
+    const estimatedOutput = String(
+      relayQuote.estimatedOutput || relayQuote.toAmount || relayQuote.outputAmount || "0"
+    );
+    const estimatedTime = Number(
+      relayQuote.estimatedTimeSeconds || relayQuote.estimatedTime || relayQuote.duration || 0
+    );
+    const totalFees = String(relayQuote.totalFee || relayQuote.fee || "0");
+    const slippage = Number(relayQuote.priceImpact || relayQuote.slippagePercent || 0);
+
+    return {
+      quoteId: `relay-${Date.now()}-${Math.random()}`,
+      providerId: "relay",
+      estimatedOutput,
+      estimatedOutputUSD: parseFloat(String(relayQuote.estimatedOutputUSD || relayQuote.toAmountUsd || "0")),
+      fees: {
+        gasFee: String(relayQuote.gasFee || relayQuote.fee || "0"),
+        bridgeFee: String(relayQuote.bridgeFee || relayQuote.fee || "0"),
+        slippagePercent: slippage,
+        total: totalFees,
+      },
+      estimatedTime,
+      route: this.buildRelayRoute(relayQuote, request),
+      rawResponse: relayQuote,
+      score: 0,
+      arcPayload: this.toRelayArcPayload(relayQuote, request),
+    };
+  }
+
+  private buildRelayRoute(route: any, request: QuoteRequest): RouteStep[] {
+    return [
+      {
+        id: "relay-step-0",
+        type: route.type === "swap" ? "swap" : "bridge",
+        from: {
+          token: request.sourceToken,
+          chain: request.sourceChain,
+          amount: request.amount,
+        },
+        to: {
+          token: request.destinationToken,
+          chain: request.destinationChain,
+        },
+        minOutput: String(route.minAmountOut || route.minAmount || route.toAmount || "0"),
+      },
+    ];
+  }
+
+  private toRelayArcPayload(route: any, request: QuoteRequest): any {
+    return {
+      version: "1.0",
+      routeId: `relay-route-${Date.now()}`,
+      transactionId: "",
+      recipient: request.userAddress,
+      sourceChain: request.sourceChain,
+      destinationChain: request.destinationChain,
+      steps: [
+        {
+          id: "arc-step-0",
+          type: route.type === "swap" ? "swap" : "bridge",
+          chainId: this.chainNameToId(request.sourceChain),
+          swapData:
+            route.type === "swap"
+              ? {
+                  tokenIn: request.sourceToken,
+                  tokenOut: request.destinationToken,
+                  amountIn: request.amount,
+                  minAmountOut: String(route.minAmountOut || route.minAmount || route.toAmount || "0"),
+                  deadline: Math.floor(Date.now() / 1000) + 1800,
+                }
+              : undefined,
+          bridgeData:
+            route.type !== "swap"
+              ? {
+                  token: request.sourceToken,
+                  amount: request.amount,
+                  destinationChain: request.destinationChain,
+                  recipient: request.userAddress,
+                }
+              : undefined,
+        },
+      ],
+      deadline: Math.floor(Date.now() / 1000) + 1800,
+    };
   }
 
   /**

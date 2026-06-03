@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSignMessage } from "wagmi";
-import { useDynamicContext, DynamicWidget } from "@dynamic-labs/sdk-react-core";
+import { useDynamicWallet } from "@/hooks/use-dynamic-wallet";
+import { DynamicWidget } from "@dynamic-labs/sdk-react-core";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
@@ -30,7 +31,7 @@ function WalletsPage() {
   const { user, session } = useAuth();
   const wallet = useWallet();
   const { signMessageAsync } = useSignMessage();
-  const { primaryWallet: dynamicWallet, sdkHasLoaded: dynamicSDKLoaded } = useDynamicContext();
+  const { primaryWallet: dynamicWallet, sdkHasLoaded: dynamicSDKLoaded } = useDynamicWallet();
   const [wallets, setWallets] = useState<LinkedWallet[]>([]);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<FlowStep>("idle");

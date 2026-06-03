@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { LogOut, User as UserIcon, Wallet as WalletIcon, Sun, Moon, Menu, X } from "lucide-react";
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { useDynamicWallet } from "@/hooks/use-dynamic-wallet";
 import { useDynamicReady } from "@/integrations/dynamic/provider";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
@@ -282,7 +282,7 @@ function WalletButton() {
 
 function ClientWalletMenu() {
   const w = useWallet();
-  const dynamicContext = useDynamicContext();
+  const dynamicContext = useDynamicWallet();
   const dynamicWallet = dynamicContext?.primaryWallet;
   const setShowAuthFlow = dynamicContext?.setShowAuthFlow;
   const sdkHasLoaded = dynamicContext?.sdkHasLoaded;

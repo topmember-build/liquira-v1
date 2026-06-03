@@ -2,7 +2,7 @@
 import { Loader2, Send, Info, ShieldCheck, RefreshCcw, ArrowLeft } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAccount } from "wagmi";
-import { useDynamicContext } from "@dynamic-labs/sdk-react-core";
+import { useDynamicWallet } from "@/hooks/use-dynamic-wallet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
 import { usePermitSignature } from "@/hooks/usePermitSignature";
@@ -26,7 +26,7 @@ const PAYMENT_TOKENS = ["USDC", "EURC", "cirBTC"];
 
 export const PaymentPage = () => {
   const { address: connectedAddress, isConnected } = useAccount();
-  const { primaryWallet: dynamicWallet } = useDynamicContext();
+  const { primaryWallet: dynamicWallet } = useDynamicWallet();
   const { user } = useAuth();
   const wallet = useWallet();
   const { connect, refreshBalances } = wallet;

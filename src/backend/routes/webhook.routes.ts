@@ -13,6 +13,8 @@ import { ExecutionError } from "../utils/errors";
 import { logger } from "../utils/logger";
 import { CONFIGURATION } from "../config/environment";
 import { ARCExecutionCallback } from "../types";
+import { executionStore } from "../services/arc-store";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const router = Router();
 
@@ -41,10 +43,19 @@ function verifyWebhookSignature(
     .update(body)
     .digest("hex");
 
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature)
-  );
+  try {
+    const signatureBuffer = Buffer.from(signature, "hex");
+    const expectedBuffer = Buffer.from(expectedSignature, "hex");
+
+    if (signatureBuffer.length !== expectedBuffer.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
+  } catch (error) {
+    logger.warn("Webhook verification failed", { error: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
 }
 
 /**
@@ -101,20 +112,41 @@ router.post(
         status: callback.status,
       });
 
-      // TODO: Implement webhook handling
-      // 1. Update transaction status in database
-      // 2. Store execution log entry
-      // 3. Handle different status types:
-      //    - "initiated": Execution started
-      //    - "executing": In progress
-      //    - "completed": Success - update final output
-      //    - "failed": Error - store error message
-      // 4. Trigger frontend notifications (if using WebSockets)
-      // 5. Call any post-execution handlers (e.g., settlement confirmation)
+      const execution = executionStore.updateFromWebhook(callback);
+      if (!execution) {
+        logger.warn("ARC webhook did not match any existing execution", {
+          transactionId: callback.transactionId,
+          status: callback.status,
+        });
+      }
+
+      try {
+        const updatePayload: any = {
+          status:
+            callback.status === "completed"
+              ? "confirmed"
+              : callback.status === "failed"
+              ? "failed"
+              : "executing",
+          tx_hash: callback.txHash || undefined,
+          error_message: callback.error || undefined,
+          confirmed_at: callback.completedAt ? new Date(callback.completedAt).toISOString() : undefined,
+          amount_out: callback.finalOutput || undefined,
+        };
+
+        await supabaseAdmin.from("swaps").update(updatePayload).eq("id", callback.transactionId);
+      } catch (updateError) {
+        logger.warn("Failed to update swap record from webhook", {
+          error: updateError instanceof Error ? updateError.message : String(updateError),
+          transactionId: callback.transactionId,
+        });
+      }
 
       const response = {
         received: true,
         transactionId: callback.transactionId,
+        executionId: execution?.executionId,
+        status: callback.status,
         processedAt: new Date().toISOString(),
       };
 
