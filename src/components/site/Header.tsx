@@ -432,7 +432,11 @@ function ClientWalletMenu() {
               <button
                 onClick={() => {
                   setOpen(false);
-                  w.disconnect();
+                  if (typeof w.disconnect === "function") {
+                    w.disconnect();
+                  } else {
+                    console.warn("[WalletButton] disconnect is not available", w);
+                  }
                 }}
                 className="mt-3 w-full border border-border px-2 py-1.5 font-mono text-[11px] uppercase tracking-widest text-muted-foreground hover:bg-surface-2 hover:text-foreground"
               >
