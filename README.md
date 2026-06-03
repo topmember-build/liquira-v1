@@ -302,6 +302,28 @@ We welcome contributions! Please:
 - [ARC Deployment](./ARC_DEPLOYMENT.md) – Deployment and integration guide
 - [Supabase Setup](./SUPABASE_CIRCLE_SETUP.md) – Database schema and migration guide
 
+## ☁️ Cloudflare Pages Deployment
+
+Liquira can be deployed using Cloudflare Pages / Workers via the generated worker bundle and client assets.
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+2. Build the worker and frontend assets:
+   ```bash
+   npm run build:cloudflare
+   ```
+3. Publish to Cloudflare:
+   ```bash
+   npm run deploy:cloudflare
+   ```
+
+Notes:
+- `build:cloudflare` is an alias for the Vite/Cloudflare worker build.
+- The Cloudflare deployment uses the `src/routes/*` worker routes, not the legacy Node/Express backend in `src/backend/`.
+- Required runtime environment variables include `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and any `ARC_*` or Circle-related env vars needed for your integration.
+
 ## 📄 License
 
 This project is licensed under the MIT License – see the [LICENSE](./LICENSE) file for details.
