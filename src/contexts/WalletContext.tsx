@@ -16,7 +16,7 @@ export type WalletState = {
 
 type WalletContextValue = WalletState & {
   connect: (kind: WalletKind) => Promise<void>;
-  disconnect: () => void;
+  disconnect: () => Promise<void>;
   switchChain: (chainId: string) => Promise<void>;
   refreshBalances: () => Promise<void>;
   hasWalletConnect: boolean;
@@ -42,7 +42,7 @@ const fallbackValue: WalletContextValue = {
   connect: async () => {
     throw new Error("Wallet provider is not loaded yet.");
   },
-  disconnect: () => {},
+  disconnect: async () => {},
   switchChain: async () => {},
   refreshBalances: async () => {},
   hasWalletConnect: false,

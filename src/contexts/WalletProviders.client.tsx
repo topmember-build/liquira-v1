@@ -203,12 +203,12 @@ function InnerWalletProvider({ children }: { children: ReactNode }) {
 
   const disconnect = useCallback(async () => {
     try {
-      if (connector && typeof connector.disconnect === "function") {
-        await connector.disconnect();
-        return;
-      }
       if (typeof disconnectAsync === "function") {
         await disconnectAsync();
+        return;
+      }
+      if (connector && typeof connector.disconnect === "function") {
+        await connector.disconnect();
         return;
       }
       console.warn("[wallet] disconnect unavailable - no disconnect function found", {

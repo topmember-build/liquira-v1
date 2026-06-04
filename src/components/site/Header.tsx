@@ -211,7 +211,7 @@ function AuthButton() {
         <span className="hidden sm:inline">Account</span>
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-56 rounded-md border border-border bg-surface-1 p-1 shadow-xl">
+        <div className="absolute right-0 mt-2 min-w-[14rem] w-full max-w-[calc(100vw-1rem)] rounded-md border border-border bg-surface-1 p-1 shadow-xl">
           <div className="border-b border-border px-3 py-2">
             <div className="truncate font-mono text-[11px] text-foreground">{user.email}</div>
             <div className="text-mono-label mt-0.5" style={{ fontSize: 9 }}>
@@ -321,7 +321,7 @@ function ClientWalletMenu() {
           {w.isConnecting ? "Connecting…" : "Connect"}
         </button>
         {open && (
-          <div className="absolute right-0 mt-2 w-56 rounded-md border border-border bg-surface-1 p-1 shadow-xl">
+          <div className="absolute right-0 mt-2 min-w-[14rem] w-full max-w-[calc(100vw-1rem)] rounded-md border border-border bg-surface-1 p-1 shadow-xl">
             <button
               onClick={() => {
                 setOpen(false);
@@ -375,7 +375,7 @@ function ClientWalletMenu() {
           : "Wallet"}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-64 rounded-md border border-border bg-surface-1 p-3 shadow-xl">
+        <div className="absolute right-0 mt-2 min-w-[14rem] w-full max-w-[calc(100vw-1rem)] rounded-md border border-border bg-surface-1 p-3 shadow-xl overflow-hidden">
           {w.connected && w.address ? (
             <>
               <div className="text-mono-label" style={{ fontSize: 9 }}>

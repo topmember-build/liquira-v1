@@ -47,7 +47,7 @@ export function NotificationBell() {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 mt-2 w-80 rounded-md border border-border bg-surface-1 shadow-xl">
+        <div className="absolute right-0 mt-2 min-w-[18rem] w-full max-w-[calc(100vw-1rem)] overflow-hidden rounded-md border border-border bg-surface-1 shadow-xl">
           <div className="flex items-center justify-between border-b border-border px-3 py-2">
             <div className="text-mono-label" style={{ fontSize: 10 }}>
               NOTIFICATIONS
