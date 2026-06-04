@@ -21,6 +21,22 @@ export default defineConfig({
         },
       ],
     },
+    optimizeDeps: {
+      exclude: [
+        "@tanstack/start-server-core",
+        "@tanstack/react-start",
+        "@tanstack/react-router",
+        "@tanstack/router-core",
+        "@tanstack/start-client-core",
+      ],
+    },
+    ssr: {
+      noExternal: [
+        "@tanstack/start-server-core",
+        "@tanstack/react-start",
+        "@tanstack/react-router",
+      ],
+    },
     build: {
       // Prevent Vite from trying to remove the `dist` output directory.
       // This works around permission/lock issues on Windows when `.wrangler` is held open.
