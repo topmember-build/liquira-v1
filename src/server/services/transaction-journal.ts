@@ -36,6 +36,11 @@ async function resolveUserIdForWallet(address: string): Promise<string | undefin
 
   if (!data?.user_id) {
     logger.debug("[Transaction Journal] Wallet address not linked to a user", { normalized });
+  } else {
+    logger.debug("[Transaction Journal] Wallet address linked to user", {
+      normalized,
+      userId: data.user_id,
+    });
   }
 
   return data?.user_id ?? undefined;
@@ -50,6 +55,10 @@ async function sendUserNotification(
   metadata?: Json
 ): Promise<void> {
   if (!UUID_REGEX.test(userId)) {
+    logger.warn("[Transaction Journal] Skipping notification for invalid userId", {
+      userId,
+      type,
+    });
     return;
   }
 
@@ -63,7 +72,11 @@ async function sendUserNotification(
   });
 
   if (error) {
-    logger.warn("[Transaction Journal] Failed to send notification", { error });
+    logger.warn("[Transaction Journal] Failed to send notification", {
+      error,
+      userId,
+      type,
+    });
   }
 }
 
@@ -81,10 +94,10 @@ export async function notifyTransactionStatus(
     : undefined;
 
   if (transaction.recipientAddress && !recipientUserId) {
-    console.debug(
-      "[Transaction Journal] Received payment recipient wallet is not linked to a user account:",
-      transaction.recipientAddress
-    );
+    logger.debug("[Transaction Journal] Received payment recipient wallet is not linked to a user account", {
+      transactionId: transaction.transactionId,
+      recipientAddress: transaction.recipientAddress,
+    });
   }
 
   const metadata: Json = {
@@ -110,7 +123,7 @@ export async function notifyTransactionStatus(
         metadata
       );
     } else {
-      console.debug(
+      logger.debug(
         "[Transaction Journal] No sender user available for pending payment notification",
         { transactionId: transaction.transactionId, walletAddress: transaction.walletAddress }
       );
@@ -125,6 +138,12 @@ export async function notifyTransactionStatus(
         "/account/history",
         metadata
       );
+    } else if (recipientUserId && recipientUserId === senderUserId) {
+      logger.debug("[Transaction Journal] Skipping recipient pending notification because sender and recipient are the same user", {
+        transactionId: transaction.transactionId,
+        recipientAddress: transaction.recipientAddress,
+        senderUserId,
+      });
     }
     return;
   }
@@ -140,7 +159,7 @@ export async function notifyTransactionStatus(
         metadata
       );
     } else {
-      console.debug(
+      logger.debug(
         "[Transaction Journal] No sender user available for success notification",
         { transactionId: transaction.transactionId, walletAddress: transaction.walletAddress }
       );
@@ -155,8 +174,14 @@ export async function notifyTransactionStatus(
         "/account/history",
         metadata
       );
+    } else if (recipientUserId && recipientUserId === senderUserId) {
+      logger.debug("[Transaction Journal] Skipping recipient success notification because sender and recipient are the same user", {
+        transactionId: transaction.transactionId,
+        recipientAddress: transaction.recipientAddress,
+        senderUserId,
+      });
     } else if (transaction.recipientAddress && !recipientUserId) {
-      console.debug(
+      logger.debug(
         "[Transaction Journal] No recipient user available for success notification",
         { transactionId: transaction.transactionId, recipientAddress: transaction.recipientAddress }
       );
