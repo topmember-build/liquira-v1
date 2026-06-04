@@ -60,12 +60,14 @@ function extractAuthorizationHeader(headers: HeadersInit | undefined): string | 
   return null
 }
 
-import { createClient } from '@supabase/supabase-js'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 
-
-
-export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
+export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server<{
+  supabase: SupabaseClient<Database>
+  userId: string
+  claims: unknown
+}>(
   async (options: any) => {
     const { next, headers } = options
     
