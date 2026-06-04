@@ -5,6 +5,7 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... } }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { visualizer } from "rollup-plugin-visualizer";
 import path from "node:path";
 
 export default defineConfig({
@@ -25,11 +26,15 @@ export default defineConfig({
       // This works around permission/lock issues on Windows when `.wrangler` is held open.
       emptyOutDir: false,
       rollupOptions: {
-        output: {
-          // Let Vite/Rollup auto-split wallet dependencies to avoid manual chunk cycles.
-        },
+        output: {},
       },
       chunkSizeWarningLimit: 1200,
     },
+    // Optional bundle analysis. Run with `ANALYZE=true npm run build:frontend`.
+    plugins: process.env.ANALYZE
+      ? [
+          visualizer({ filename: 'dist/client/bundle-stats.html', gzipSize: true, brotliSize: true }),
+        ]
+      : [],
   },
 });
