@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { LogOut, User as UserIcon, Wallet as WalletIcon, Sun, Moon, Menu, X } from "lucide-react";
+import { LogOut, User as UserIcon, Wallet as WalletIcon, Sun, Moon } from "lucide-react";
 import { useDynamicWallet } from "@/hooks/use-dynamic-wallet";
 import { useDynamicReady } from "@/integrations/dynamic/provider";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,23 +14,9 @@ import TokenIcon from "@/lib/token-icons";
 import { cn } from "@/lib/utils";
 
 export function Header() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const mobileMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const onClick = (event: MouseEvent) => {
-      if (mobileOpen && mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
-        setMobileOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [mobileOpen]);
-
   return (
     <header className="relative sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex min-h-[3.5rem] max-w-[1400px] items-center justify-between gap-3 px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-3">
           <Logo className="w-10 h-auto object-contain" />
           <div className="leading-tight">
@@ -59,14 +45,6 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setMobileOpen((open) => !open)}
-            className="grid h-9 w-9 place-items-center rounded border border-border text-muted-foreground transition-colors hover:bg-surface-1 md:hidden"
-            aria-label={mobileOpen ? "Close mobile menu" : "Open mobile menu"}
-          >
-            {mobileOpen ? <X size={16} /> : <Menu size={16} />}
-          </button>
           <CurrencySwitcher className="hidden md:block" />
           <ThemeToggle />
           <NotificationBell />
@@ -75,50 +53,20 @@ export function Header() {
         </div>
       </div>
 
-      {mobileOpen && (
-        <div
-          ref={mobileMenuRef}
-          className="fixed inset-x-0 top-14 bottom-0 z-50 border-t border-border bg-background/95 p-4 shadow-xl backdrop-blur-sm overflow-auto md:hidden"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-        >
-          <nav className="grid gap-3">
-            <a
-              href="#router"
-              onClick={() => setMobileOpen(false)}
-              className="font-mono text-sm text-foreground transition-colors hover:text-primary"
-            >
-              <span className="mr-2 text-primary/70">01</span>Router
-            </a>
-            <a
-              href="#pools"
-              onClick={() => setMobileOpen(false)}
-              className="font-mono text-sm text-foreground transition-colors hover:text-primary"
-            >
-              <span className="mr-2 text-primary/70">02</span>Pools
-            </a>
-            <Link
-              to="/stats"
-              onClick={() => setMobileOpen(false)}
-              className="font-mono text-sm text-foreground transition-colors hover:text-primary"
-            >
-              <span className="mr-2 text-primary/70">03</span>Stats
-            </Link>
-            <a
-              href="#developers"
-              onClick={() => setMobileOpen(false)}
-              className="font-mono text-sm text-foreground transition-colors hover:text-primary"
-            >
-              <span className="mr-2 text-primary/70">04</span>Developers
-            </a>
-          </nav>
-          <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
-            <div className="flex items-center justify-between gap-3">
-              <CurrencySwitcher className="block w-full" />
-            </div>
-            <ThemeToggle />
-          </div>
-        </div>
-      )}
+      <nav className="flex flex-wrap items-center justify-center gap-3 border-t border-border px-4 py-3 text-center md:hidden">
+        <a href="#router" className="font-mono text-[12px] text-muted-foreground transition-colors hover:text-foreground">
+          <span className="mr-1.5 text-primary/70">01</span>Router
+        </a>
+        <a href="#pools" className="font-mono text-[12px] text-muted-foreground transition-colors hover:text-foreground">
+          <span className="mr-1.5 text-primary/70">02</span>Pools
+        </a>
+        <Link to="/stats" className="font-mono text-[12px] text-muted-foreground transition-colors hover:text-foreground">
+          <span className="mr-1.5 text-primary/70">03</span>Stats
+        </Link>
+        <a href="#developers" className="font-mono text-[12px] text-muted-foreground transition-colors hover:text-foreground">
+          <span className="mr-1.5 text-primary/70">04</span>Developers
+        </a>
+      </nav>
     </header>
   );
 }
