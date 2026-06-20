@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/site/Header";
 import { Footer } from "@/components/site/Footer";
-import { ChartContainer, ChartTooltip } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import {
   AreaChart,
   Area,
@@ -207,7 +207,7 @@ function AnalyticsPage() {
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                           <XAxis dataKey="date" tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                           <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                          <Tooltip content={<ChartTooltip />} />
+                          <Tooltip content={<ChartTooltipContent />} />
                           <Line type="monotone" dataKey="count" stroke="var(--chart-1)" strokeWidth={3} dot={false} />
                         </LineChart>
                       </ChartContainer>
@@ -227,7 +227,7 @@ function AnalyticsPage() {
                           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                           <XAxis dataKey="date" tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
                           <YAxis tick={{ fill: "var(--muted-foreground)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                          <Tooltip content={<ChartTooltip />} />
+                          <Tooltip content={<ChartTooltipContent />} />
                           <Area type="monotone" dataKey="users" stroke="var(--chart-2)" fill="rgba(72, 209, 178, 0.2)" fillOpacity={0.65} />
                         </AreaChart>
                       </ChartContainer>
