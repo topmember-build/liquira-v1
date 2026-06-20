@@ -16,6 +16,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as FaviconRouteImport } from './routes/favicon'
 import { Route as DocsRouteImport } from './routes/docs'
 import { Route as BetaAccessRouteImport } from './routes/beta-access'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountIndexRouteImport } from './routes/account.index'
@@ -73,6 +74,11 @@ const DocsRoute = DocsRouteImport.update({
 const BetaAccessRoute = BetaAccessRouteImport.update({
   id: '/beta-access',
   path: '/beta-access',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountRoute = AccountRouteImport.update({
@@ -194,6 +200,7 @@ const ApiBetaAdminAuthRoute = ApiBetaAdminAuthRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRouteWithChildren
+  '/analytics': typeof AnalyticsRoute
   '/beta-access': typeof BetaAccessRoute
   '/docs': typeof DocsRouteWithChildren
   '/favicon': typeof FaviconRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/analytics': typeof AnalyticsRoute
   '/beta-access': typeof BetaAccessRoute
   '/docs': typeof DocsRouteWithChildren
   '/favicon': typeof FaviconRoute
@@ -258,6 +266,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/account': typeof AccountRouteWithChildren
+  '/analytics': typeof AnalyticsRoute
   '/beta-access': typeof BetaAccessRoute
   '/docs': typeof DocsRouteWithChildren
   '/favicon': typeof FaviconRoute
@@ -292,6 +301,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/account'
+    | '/analytics'
     | '/beta-access'
     | '/docs'
     | '/favicon'
@@ -323,6 +333,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/analytics'
     | '/beta-access'
     | '/docs'
     | '/favicon'
@@ -355,6 +366,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/account'
+    | '/analytics'
     | '/beta-access'
     | '/docs'
     | '/favicon'
@@ -388,6 +400,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRouteWithChildren
+  AnalyticsRoute: typeof AnalyticsRoute
   BetaAccessRoute: typeof BetaAccessRoute
   DocsRoute: typeof DocsRouteWithChildren
   FaviconRoute: typeof FaviconRoute
@@ -456,6 +469,13 @@ declare module '@tanstack/react-router' {
       path: '/beta-access'
       fullPath: '/beta-access'
       preLoaderRoute: typeof BetaAccessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/account': {
@@ -672,6 +692,7 @@ const TxRouteWithChildren = TxRoute._addFileChildren(TxRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRouteWithChildren,
+  AnalyticsRoute: AnalyticsRoute,
   BetaAccessRoute: BetaAccessRoute,
   DocsRoute: DocsRouteWithChildren,
   FaviconRoute: FaviconRoute,

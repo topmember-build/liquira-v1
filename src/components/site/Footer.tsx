@@ -38,14 +38,18 @@ export function Footer() {
                 {(items as string[]).map((i) => (
                   <li key={i}>
                     {i === "Docs" ? (
-                    <a href="/docs" className="text-muted-foreground transition-colors hover:text-foreground">
-                      {i}
-                    </a>
-                  ) : (
-                    <a href="#" className="text-muted-foreground transition-colors hover:text-foreground">
-                      {i}
-                    </a>
-                  )}
+                      <a href="/docs" className="text-muted-foreground transition-colors hover:text-foreground">
+                        {i}
+                      </a>
+                    ) : i === "Analytics" ? (
+                      <a href="/analytics" className="text-muted-foreground transition-colors hover:text-foreground">
+                        {i}
+                      </a>
+                    ) : (
+                      <a href="#" className="text-muted-foreground transition-colors hover:text-foreground">
+                        {i}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>

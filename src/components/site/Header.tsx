@@ -39,8 +39,11 @@ export function Header() {
           <Link to="/stats" className="font-mono text-[13px] text-muted-foreground transition-colors hover:text-foreground">
             <span className="mr-1.5 text-primary/70">03</span>Stats
           </Link>
+          <Link to="/analytics" className="font-mono text-[13px] text-muted-foreground transition-colors hover:text-foreground">
+            <span className="mr-1.5 text-primary/70">04</span>Analytics
+          </Link>
           <a href="#developers" className="font-mono text-[13px] text-muted-foreground transition-colors hover:text-foreground">
-            <span className="mr-1.5 text-primary/70">04</span>Developers
+            <span className="mr-1.5 text-primary/70">05</span>Developers
           </a>
         </nav>
 
@@ -63,8 +66,11 @@ export function Header() {
         <Link to="/stats" className="font-mono text-[12px] text-muted-foreground transition-colors hover:text-foreground">
           <span className="mr-1.5 text-primary/70">03</span>Stats
         </Link>
+        <Link to="/analytics" className="font-mono text-[12px] text-muted-foreground transition-colors hover:text-foreground">
+          <span className="mr-1.5 text-primary/70">04</span>Analytics
+        </Link>
         <a href="#developers" className="font-mono text-[12px] text-muted-foreground transition-colors hover:text-foreground">
-          <span className="mr-1.5 text-primary/70">04</span>Developers
+          <span className="mr-1.5 text-primary/70">05</span>Developers
         </a>
       </nav>
     </header>
