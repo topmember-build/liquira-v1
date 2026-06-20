@@ -35,6 +35,7 @@ const isPublicBetaPath = (pathname: string) => {
     "/beta-access",
     "/auth/callback",
     "/admin/invites",
+    "/analytics",
   ].some((path) => pathname === path || pathname.startsWith(`${path}/`));
 };
 
